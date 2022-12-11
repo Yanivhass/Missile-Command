@@ -73,21 +73,34 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
                 method.
         """
         super(MissileCommandEnv, self).__init__()
+        '''
+        Action space for the game
+        '''
         self.action_space = spaces.Dict(
+            # Actions of friendly units
             {'friends': spaces.Dict(
                 { 'batteries': spaces.MultiBinary(CONFIG.FRIENDLY_BATTERY.NUMBER),
+                  # For the batteries there are only two actions for each battery: a missile has been
+                  # launched or not
+
+                  # Actions for the missiles:
                   'missiles':  spaces.Dict(
                       {
-                    # 'launch: 0 - None, 1 - launch,
+                        # 'launch: 0 - None, 1 - launch,
                         'launch':  spaces.MultiDiscrete([[2]*CONFIG.FRIENDLY_MISSILES.NUMBER]*CONFIG.FRIENDLY_BATTERY.NUMBER),
-                          # 0 - battery target, 1 - missile - target
+                        # 0 - battery target, 1 - missile - target
                         'enemy_tar':   spaces.MultiDiscrete(
                             [[2]*CONFIG.FRIENDLY_MISSILES.NUMBER]*CONFIG.FRIENDLY_BATTERY.NUMBER),
-                          # 0 - non-attacker, 1- attacker
+                        # 0 - non-attacker, 1- attacker
                         'enemy_atc': spaces.MultiDiscrete(
                             [[2] * CONFIG.FRIENDLY_MISSILES.NUMBER] * CONFIG.FRIENDLY_BATTERY.NUMBER),
+                        # which enemy is being attacked
                         'actions': spaces.MultiDiscrete([[CONFIG.FRIENDLY_MISSILES.NB_ACTIONS]*CONFIG.FRIENDLY_MISSILES.NUMBER]*CONFIG.FRIENDLY_BATTERY.NUMBER),
+                        # A set which holds all of the possible actions
                         'targets': spaces.MultiDiscrete([[[CONFIG.ENNEMY_CITIES_BATTERY.NUMBER, CONFIG.ENNEMY_CITIES.NUMBER]]*CONFIG.FRIENDLY_MISSILES.NUMBER]*CONFIG.FRIENDLY_BATTERY.NUMBER)
+                        # what is the target (which battery / city)
+
+
                         #     spaces.Dict(
                         #     {
                         #         # 'bats': spaces.MultiDiscrete([[CONFIG.ENNEMY_BATTERY.NUMBER] * CONFIG.FRIENDLY_MISSILES.NUMBER] * CONFIG.FRIENDLY_BATTERY.NUMBER),
@@ -95,6 +108,7 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
                         # })
                       }
                   )}),
+            # The enemies have a very similar action space
              'enemies': spaces.Dict(
                  {'batteries': spaces.MultiBinary(CONFIG.ENNEMY_BATTERY.NUMBER),
                   'missiles': spaces.Dict(
@@ -116,6 +130,7 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
                            #  })
                        }
                   )}),
+            # cities also have similar action space
              'cities': spaces.Dict(
                  {
                      'batteries': spaces.MultiBinary(CONFIG.ENNEMY_CITIES_BATTERY.NUMBER),
@@ -140,9 +155,14 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         self.observation_space = \
             spaces.Dict(
             {
+                # state-space for the enemy batteries
             'enemy_bat':  spaces.Dict( {
                 'pose': spaces.Box(pose_boxmin, pose_boxmax, shape=(CONFIG.ENNEMY_BATTERY.NUMBER, 4)),
+                # pose holds the position of each battery
                 'health': spaces.Box(0, 1, shape=(CONFIG.ENNEMY_BATTERY.NUMBER, 1)),
+                # health - the hp each battery has
+
+                # state space of the missiles is the same as the action space
                 'missiles': spaces.Dict( {
                     # 0 - None, 1 - Missile, 2 - Bats
                     'launch': spaces.MultiDiscrete([[2]*CONFIG.ENEMY_MISSILES.NUMBER]*CONFIG.ENNEMY_BATTERY.NUMBER),
@@ -165,6 +185,7 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
                 #       'fr_missiles': spaces.MultiDiscrete([CONFIG.FRIENDLY_MISSILES.NUMBER] * CONFIG.ENNEMY_BATTERY.NUMBER)
                 #      })
             }),
+                # cities have similar values to the batteries
             'enemy_cities': spaces.Dict( {
                 'pose': spaces.Box(pose_boxmin, pose_boxmax, shape=(CONFIG.ENNEMY_BATTERY.NUMBER, 4)),
                 # 'pose': spaces.Box(0, CONFIG.WIDTH, shape=(CONFIG.ENNEMY_CITIES_BATTERY.NUMBER, 4)),
@@ -181,6 +202,7 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
 
                 }),
             }),
+            # friends batteries have the same params as the enemy battery
             'friends_bat': spaces.Dict({
                 'pose': spaces.Box(pose_boxmin, pose_boxmax, shape=(CONFIG.ENNEMY_BATTERY.NUMBER, 4)),
                 'health': spaces.Box(0, 1, shape = (CONFIG.FRIENDLY_BATTERY.NUMBER, 1)),
