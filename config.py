@@ -16,21 +16,22 @@ class CONFIG():
         WIDTH (int): environment width.
     """
     DTYPE: np.dtype = np.float32
-    FPS: int = 1 #144
+    FPS: int = 10  # 144
     HEIGHT: int = 1000
     WIDTH: int = 1000
 
     @dataclass
-    class ENNEMY_BATTERY():
+    class DEFENDERS:
         """Anti-missiles battery configuration.
 
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        NUMBER: int = 3
+        QUANTITY: int = 3  # number of entities
         RADIUS: float = 20.0
         RANGE: float = 200
         MAX_HEALTH: float = 1.0
+        MISSILES_PER_UNIT = 2
 
         INIT_HEIGHT_RANGE = [0.1, 0.2]
         INIT_POS_RANGE = [0.3, 1]
@@ -44,20 +45,32 @@ class CONFIG():
         DETECTION_RANGE = [100, 500]
         KILL_RANGE = 800
 
+        @dataclass
+        class MISSILES:
+            RADIUS: float = 10.0
+            EXPLOSION_RADIUS: float = 30
+            PROBA_IN: float = 0.005
+            SPEED: float = 40.0
+            MAX_HEALTH = 1.0
 
+            NB_ACTIONS: int = 9
+            LAUNCH_THETA: float = 90
+            DTHETA = np.arange(-10, 25, 5) \
+ \
     @dataclass
-    class FRIENDLY_BATTERY():
+    class ATTACKERS:
         """Atack-missiles battery configuration.
 
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        NUMBER: int = 3
+        QUANTITY: int = 3
         RADIUS: float = 20.0
         RANGE: float = 466.0
         MAX_HEALTH: float = 1
+        MISSILES_PER_UNIT = 10
 
-        INIT_HEIGHT_RANGE =  [0.5, 0.7]
+        INIT_HEIGHT_RANGE = [0.5, 0.7]
         INIT_POS_RANGE = [0.0, 0.3]
         SPEED: float = 20.0
         # LAUNCH_VEL = [0.0, 1.0]
@@ -68,9 +81,20 @@ class CONFIG():
         DETECTION_RANGE = [200.0, 2000.0]
         KILL_RANGE = 1000.0
 
+        @dataclass
+        class MISSILES:
+            RADIUS: float = 10.0
+            EXPLOSION_RADIUS: float = 50
+            PROBA_IN: float = 0.005
+            MAX_HEALTH = 1
+
+            NB_ACTIONS: int = 9
+            SPEED: float = 20.0
+            LAUNCH_THETA: float = 0
+            DTHETA = np.arange(-10, 25, 5)
 
     @dataclass
-    class ENNEMY_CITIES_BATTERY():
+    class CITIES:
         """Cities configuration.
 
         Attributes:
@@ -78,7 +102,7 @@ class CONFIG():
             RADIUS (float): radius of a city object.
         """
 
-        NUMBER: int = 1
+        QUANTITY: int = 1
         RADIUS: float = 5.0
         # RANGE: float = 466.0
         MAX_HEALTH: float = 1
@@ -93,68 +117,68 @@ class CONFIG():
 
         DLaunch_Time: int = 5
 
+    #
+    # class ENNEMY_CITIES():
+    #     """Cities configuration.
+    #
+    #     Attributes:
+    #         NUMBER (int): number of cities to defend (even integer >= 2).
+    #         RADIUS (float): radius of a city object.
+    #     """
+    #     NUMBER: int = 10
+    #     RADIUS: float = 5.0
+    #     MAX_HEALTH = 1.0
+    #
+    #     INIT_HEIGHT_RANGE = [0.1, 0.2]
+    #     INIT_POS_RANGE = [0.3, 1.0]
+    #     SPEED: float = 0.0
+    #     # LAUNCH_VEL = [0.0, 1.0]
+    #     LAUNCH_THETA: float = 0
+    #     MAX_LAUNCH: int = 4
+    #     DLaunch_Time: int = 10
 
-    class ENNEMY_CITIES():
-        """Cities configuration.
+    # @dataclass
+    # class BLUE_MISSILES():
+    #     """Enemy missiles configuration.
+    #
+    #     Attributes:
+    #         NUMBER (int): total number of enemy missiles for 1 episode.
+    #         EXPLOSION_RADIUS (float): radius of target hit
+    #         RADIUS (float): radius of an enemy missile object.
+    #         SPEED (float): enemy missile speed.
+    #     """
+    #     NUMBER: int = 2
+    #     RADIUS: float = 10.0
+    #     EXPLOSION_RADIUS: float = 30
+    #     PROBA_IN: float = 0.005
+    #     SPEED: float = 40.0
+    #     MAX_HEALTH = 1.0
+    #
+    #     NB_ACTIONS: int = 9
+    #     LAUNCH_THETA: float = 90
+    #     DTHETA = np.arange(-10, 25, 5)
 
-        Attributes:
-            NUMBER (int): number of cities to defend (even integer >= 2).
-            RADIUS (float): radius of a city object.
-        """
-        NUMBER: int = 10
-        RADIUS: float = 5.0
-        MAX_HEALTH = 1.0
-
-        INIT_HEIGHT_RANGE = [0.1, 0.2]
-        INIT_POS_RANGE = [0.3, 1.0]
-        SPEED: float = 0.0
-        # LAUNCH_VEL = [0.0, 1.0]
-        LAUNCH_THETA: float = 0
-        MAX_LAUNCH: int = 4
-        DLaunch_Time: int = 10
-
-    @dataclass
-    class ENEMY_MISSILES():
-        """Enemy missiles configuration.
-
-        Attributes:
-            NUMBER (int): total number of enemy missiles for 1 episode.
-            EXPLOSION_RADIUS (float): radius of target hit
-            RADIUS (float): radius of an enemy missile object.
-            SPEED (float): enemy missile speed.
-        """
-        NUMBER: int = 2
-        RADIUS: float = 10.0
-        EXPLOSION_RADIUS: float = 30
-        PROBA_IN: float = 0.005
-        SPEED: float = 40.0
-        MAX_HEALTH = 1.0
-
-        NB_ACTIONS: int = 9
-        LAUNCH_THETA: float = 90
-        DTHETA = np.arange(-10, 25, 5)
-
-    @dataclass
-    class FRIENDLY_MISSILES():
-        """Friendly missiles configuration.
-
-        Attributes:
-            NUMBER (int): total number of available friendly missiles.
-            EXPLOSION_RADIUS (float): maximum explosion radius.
-            EXPLOSION_SPEED (float): speed of the explosion.
-            RADIUS (float): radius of a friendly missile object.
-            SPEED (float): friendly missile speed.
-        """
-        NUMBER: int = 10
-        RADIUS: float = 10.0
-        EXPLOSION_RADIUS: float = 50
-        PROBA_IN: float = 0.005
-        MAX_HEALTH = 1
-
-        NB_ACTIONS: int = 9
-        SPEED: float = 20.0
-        LAUNCH_THETA: float = 0
-        DTHETA = np.arange(-10, 25, 5)
+    # @dataclass
+    # class RED_MISSILES():
+    #     """Friendly missiles configuration.
+    #
+    #     Attributes:
+    #         NUMBER (int): total number of available friendly missiles.
+    #         EXPLOSION_RADIUS (float): maximum explosion radius.
+    #         EXPLOSION_SPEED (float): speed of the explosion.
+    #         RADIUS (float): radius of a friendly missile object.
+    #         SPEED (float): friendly missile speed.
+    #     """
+    #     NUMBER: int = 10
+    #     RADIUS: float = 10.0
+    #     EXPLOSION_RADIUS: float = 50
+    #     PROBA_IN: float = 0.005
+    #     MAX_HEALTH = 1
+    #
+    #     NB_ACTIONS: int = 9
+    #     SPEED: float = 20.0
+    #     LAUNCH_THETA: float = 0
+    #     DTHETA = np.arange(-10, 25, 5)
 
     @dataclass
     class COLORS():
@@ -170,17 +194,15 @@ class CONFIG():
             TARGET (tuple): #ffffff.
         """
         BACKGROUND: tuple = (0, 0, 0)
-        ENNEMY_BATTERY: tuple = (255, 255, 255)
-        ENNEMY_BATTERY_RANGE: tuple = (125, 255, 125)
-        ENEMY_MISSILE: tuple = (255, 0, 0)
-        ENNEMY_CITY_BATTERY: tuple = (0, 0, 0)
-        ENNEMY_CITY: tuple = (0, 0, 255)
-        FRIENDLY_BATTERY: tuple = (0, 255, 0)
-        FRIENDLY_MISSILE: tuple = (0, 125, 125)
+        BLUE_TEAM: tuple = (255, 255, 255)
+        BLUE_TEAM_TARGETING_RANGE: tuple = (125, 255, 125)
+        BLUE_TEAM_MISSILE: tuple = (255, 0, 0)
+        BLUE_TEAM_BATTERY: tuple = (0, 0, 0)
+        BLUE_TEAM_CITY: tuple = (0, 0, 255)
+        RED_TEAM_ENTITY: tuple = (0, 255, 0)
+        RED_TEAM_MISSILE: tuple = (0, 125, 125)
         EXPLOSION: tuple = (255, 255, 0)
         TARGET: tuple = (255, 255, 255)
-
-
 
     @dataclass
     class OBSERVATION():
@@ -212,8 +234,6 @@ class CONFIG():
         RENDER_PROCESSED_HEIGHT = 1000
         RENDER_PROCESSED_WIDTH = 1000
 
-
-
     @dataclass
     class REWARD():
         """Reward configuration.
@@ -228,15 +248,13 @@ class CONFIG():
             ENEMEY_MISSILE_LAUNCHED (float); reward for each ennemy missile launched.
             ENNEMY_TARGET_MISSED (float); reward for each friendly missile target miss.
         """
-        DESTROYED_ENNEMY_CITY: float = +10.0
-        DESTROYED_ENNEMY_BATTERY: float = +50.0
-        DESTROYED_ENEMEY_MISSILES: float = +5.0
-        ENEMEY_MISSILE_LAUNCHED: float = -10.0
+        DESTROYED_CITY: float = +10.0
+        DESTROYED_BATTERY: float = +50.0
+        DESTROYED_MISSILES: float = +5.0
+        ENEMY_MISSILE_LAUNCHED: float = -10.0
         DESTROYED_FRIENDLY_BATTERY: float = -50.0
         DESTROYED_FRIENDLY_MISSILES: float = -10.0
         FRIENDLY_MISSILE_LAUNCHED: float = +5.0
-
-
 
     # @dataclass
     # class TARGET():

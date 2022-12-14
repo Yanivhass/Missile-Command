@@ -8,148 +8,188 @@ import numpy as np
 from config import CONFIG
 from utils import get_cv2_xy
 
-class EnemyMissiles():
+# class EnemyMissiles():
+#
+#     """Go from current step to next one.
+#
+#            The missile launched is done in the main environment class.
+#
+#            Args:
+#                action (int): (0) do nothing, (1) fire missile,
+#                (2) target up, (3) target down, (4), target left, (5) target right,
+#                (6) target_left_up, (7) target_left_down, (8) target_right_up, (9) target_right_down
+#
+#            Returns:
+#                observation: None.
+#
+#                reward: None.
+#
+#                done: None.
+#
+#                info (dict): additional information of the current time step. It
+#                    contains key "can_fire" with associated value "True" if the
+#                    anti-missile battery can fire a missile and "False" otherwise.
+#            """
+#
+#     def __init__(self, number = CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES,
+#                  pose = np.array([CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0]*CONFIG.WIDTH, 0, CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA]),
+#                  health = CONFIG.ENEMY_MISSILES.MAX_HEALTH):
+#         # self.pose = np.tile(pose, (number, 1))
+#         self.pose = pose
+#         self.health = health*np.ones(number)
+#         self.launch = np.zeros(number, dtype=bool)
+#         self.enemy_tar = np.zeros(number, dtype=bool)
+#         self.enemy_atc = np.zeros(number, dtype=bool)
+#         self.targets = {
+#             'missiles': np.zeros((number, 2), dtype=int)
+#             # 'fr_bats': np.zeros((number), dtype=int),
+#             # 'fr_missiles': np.zeros((number), dtype=int)
+#         }
+#                     # a value can be in the range 0: CONFIG.FRIENDLY_BATTERY.NUMBER*CONFIG.FRIENDLY_MISSILES.NUMBER
+#
+#
+#
+#     def reset(self, pose = np.array([CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0]*CONFIG.WIDTH, 0, CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA]),
+#                  health = CONFIG.ENEMY_MISSILES.MAX_HEALTH):
+#         self.pose[:] = pose
+#         self.health[:] = health
+#         self.launch[:] = False
+#         self.enemy_tar[:] = False
+#         self.enemy_atc[:] = False
+#         # self.targets['fr_bats'][:] = 0
+#         self.targets['missiles'][:] = 0
+#
+#
+#     def _compute_velocity(self, target):
+#         """Launch a new missile.
+#
+#         - 0) Generate initial and final positions.
+#         - 1) Compute speed vectors.
+#         - 2) Add the new missile.
+#         """
+#         # Generate initial and final positions
+#         # ------------------------------------------
+#
+#         # Initial n Final position
+#         x0, y0, x1, y1 = self.pose[0], self.pose[1], target[0], target[1]
+#
+#         # Compute speed vectors
+#         # ------------------------------------------
+#         # Compute norm
+#         norm = np.sqrt(np.square(x1 - x0) + np.square(y1 - y0))
+#
+#         # Compute unit vectors
+#         ux = (x1 - x0) / norm
+#         uy = (y1 - y0) / norm
+#
+#         # Compute speed vectors
+#         vx = CONFIG.ENEMY_MISSILES.SPEED * ux
+#         vy = CONFIG.ENEMY_MISSILES.SPEED * uy
+#
+#         # Add the new missile
+#         # ------------------------------------------
+#
+#         # Create the missile
+#         missile_pose = np.array(
+#             [[x0, y0, x0, y0, x1, y1, vx, vy]],
+#             dtype=CONFIG.DTYPE,
+#         )
+#
+#         # Add it to the others
+#         self.enemy_missiles = np.vstack(
+#             (self.enemy_missiles, new_missile))
+#
+#         # Increase number of launched missiles
+#         self.nb_missiles_launched += 1
+#
+#     def step(self, action, target):
+#
+#         self.vel = self.vel_map[action]
+#         self.pos = 0
+#
+#
+# class FriendlyMissiles():
+#
+#     def __init__(self, number = CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES, pose=np.array([0, CONFIG.FRIENDLY_BATTERY.INIT_HEIGHT_RANGE[0],
+#                                                                                           CONFIG.FRIENDLY_BATTERY.SPEED, CONFIG.FRIENDLY_BATTERY.LAUNCH_THETA]), health=CONFIG.FRIENDLY_MISSILES.MAX_HEALTH):
+#         # self.pose = np.tile(pose, (number, 1))
+#         self.pose = pose
+#         self.health = health * np.ones(number)
+#         self.launch = np.zeros(number, dtype=bool)
+#         self.enemy_tar = np.zeros(number, dtype=bool)
+#         self.enemy_atc = np.zeros(number, dtype=bool)
+#         self.targets = {
+#             'bats': np.zeros((number), dtype=int),            ######## enemy bats is inferrior to city types ...........
+#             'missiles': np.zeros((number, 2), dtype=int)
+#             # 'city_bats': np.zeros((number), dtype=int),
+#             # 'city_missiles': np.zeros((number), dtype=int)
+#         }
+#
+#     def reset(self, pose=np.array([0, CONFIG.FRIENDLY_BATTERY.INIT_HEIGHT_RANGE[0],
+#                                 CONFIG.FRIENDLY_BATTERY.SPEED, CONFIG.FRIENDLY_BATTERY.LAUNCH_THETA]), health=CONFIG.FRIENDLY_MISSILES.MAX_HEALTH):
+#         self.pose[:] = pose
+#         self.health[:] = health
+#         self.launch[:] = False
+#         self.enemy_tar[:] = False
+#         self.enemy_atc[:] = False
+#         self.targets['bats'][:] = 0
+#         self.targets['missiles'][:] = 0
+#         # self.targets['city_bats'][:] = 0
+#         # self.targets['city_missiles'][:] = 0
+#
+#     def step(self, action, target):
+#
+#         # self.pose += np.array(self.vel_map[action])
+#         # self.vel = np.array(self.vel_map[action])
+#         action = 0
+#
+#         return action
 
-    """Go from current step to next one.
 
-           The missile launched is done in the main environment class.
+class Missile():
 
-           Args:
-               action (int): (0) do nothing, (1) fire missile,
-               (2) target up, (3) target down, (4), target left, (5) target right,
-               (6) target_left_up, (7) target_left_down, (8) target_right_up, (9) target_right_down
-
-           Returns:
-               observation: None.
-
-               reward: None.
-
-               done: None.
-
-               info (dict): additional information of the current time step. It
-                   contains key "can_fire" with associated value "True" if the
-                   anti-missile battery can fire a missile and "False" otherwise.
-           """
-
-    def __init__(self, number = CONFIG.ENEMY_MISSILES.NUMBER,
-                 pose = np.array([CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0]*CONFIG.WIDTH, 0, CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA]),
-                 health = CONFIG.ENEMY_MISSILES.MAX_HEALTH):
-        # self.pose = np.tile(pose, (number, 1))
-        self.pose = pose
-        self.health = health*np.ones(number)
-        self.launch = np.zeros(number, dtype=bool)
-        self.enemy_tar = np.zeros(number, dtype=bool)
-        self.enemy_atc = np.zeros(number, dtype=bool)
-        self.targets = {
-            'missiles': np.zeros((number, 2), dtype=int)
-            # 'fr_bats': np.zeros((number), dtype=int),
-            # 'fr_missiles': np.zeros((number), dtype=int)
-        }
-                    # a value can be in the range 0: CONFIG.FRIENDLY_BATTERY.NUMBER*CONFIG.FRIENDLY_MISSILES.NUMBER
+    def __init__(self, pose, health):
+        self.pose = pose  # [x,y,z,heading angle in degrees]
+        self.health = health
+        self.launched = False
+        self.target = []
+        self.target_xy = np.zeros(2, 1)
+        self.guided = False
 
 
-
-    def reset(self, pose = np.array([CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0]*CONFIG.WIDTH, 0, CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA]),
-                 health = CONFIG.ENEMY_MISSILES.MAX_HEALTH):
+    def reset(self, pose, health):
         self.pose[:] = pose
         self.health[:] = health
-        self.launch[:] = False
-        self.enemy_tar[:] = False
-        self.enemy_atc[:] = False
-        # self.targets['fr_bats'][:] = 0
-        self.targets['missiles'][:] = 0
-
-
-    def _compute_velocity(self, target):
-        """Launch a new missile.
-
-        - 0) Generate initial and final positions.
-        - 1) Compute speed vectors.
-        - 2) Add the new missile.
-        """
-        # Generate initial and final positions
-        # ------------------------------------------
-
-        # Initial n Final position
-        x0, y0, x1, y1 = self.pose[0], self.pose[1], target[0], target[1]
-
-        # Compute speed vectors
-        # ------------------------------------------
-        # Compute norm
-        norm = np.sqrt(np.square(x1 - x0) + np.square(y1 - y0))
-
-        # Compute unit vectors
-        ux = (x1 - x0) / norm
-        uy = (y1 - y0) / norm
-
-        # Compute speed vectors
-        vx = CONFIG.ENEMY_MISSILES.SPEED * ux
-        vy = CONFIG.ENEMY_MISSILES.SPEED * uy
-
-        # Add the new missile
-        # ------------------------------------------
-
-        # Create the missile
-        missile_pose = np.array(
-            [[x0, y0, x0, y0, x1, y1, vx, vy]],
-            dtype=CONFIG.DTYPE,
-        )
-
-        # Add it to the others
-        self.enemy_missiles = np.vstack(
-            (self.enemy_missiles, new_missile))
-
-        # Increase number of launched missiles
-        self.nb_missiles_launched += 1
-
-    def step(self, action, target):
-
-        self.vel = self.vel_map[action]
-        self.pos = 0
-
-
-class FriendlyMissiles():
-
-    def __init__(self, number = CONFIG.FRIENDLY_MISSILES.NUMBER, pose=np.array([0, CONFIG.FRIENDLY_BATTERY.INIT_HEIGHT_RANGE[0],
-                                CONFIG.FRIENDLY_BATTERY.SPEED, CONFIG.FRIENDLY_BATTERY.LAUNCH_THETA]), health=CONFIG.FRIENDLY_MISSILES.MAX_HEALTH):
-        # self.pose = np.tile(pose, (number, 1))
-        self.pose = pose
-        self.health = health * np.ones(number)
-        self.launch = np.zeros(number, dtype=bool)
-        self.enemy_tar = np.zeros(number, dtype=bool)
-        self.enemy_atc = np.zeros(number, dtype=bool)
-        self.targets = {
-            'bats': np.zeros((number), dtype=int),            ######## enemy bats is inferrior to city types ...........
-            'missiles': np.zeros((number, 2), dtype=int)
-            # 'city_bats': np.zeros((number), dtype=int),
-            # 'city_missiles': np.zeros((number), dtype=int)
-        }
-
-    def reset(self, pose=np.array([0, CONFIG.FRIENDLY_BATTERY.INIT_HEIGHT_RANGE[0],
-                                CONFIG.FRIENDLY_BATTERY.SPEED, CONFIG.FRIENDLY_BATTERY.LAUNCH_THETA]), health=CONFIG.FRIENDLY_MISSILES.MAX_HEALTH):
-        self.pose[:] = pose
-        self.health[:] = health
-        self.launch[:] = False
-        self.enemy_tar[:] = False
-        self.enemy_atc[:] = False
-        self.targets['bats'][:] = 0
-        self.targets['missiles'][:] = 0
+        self.launched = False
+        # self.enemy_tar[:] = False
+        # self.enemy_atc[:] = False
+        # self.targets['bats'][:] = 0
+        # self.targets['missiles'][:] = 0
         # self.targets['city_bats'][:] = 0
         # self.targets['city_missiles'][:] = 0
 
-    def step(self, action, target):
+    def step(self):
+        """
+        The missile steers itself towards it's target
+        UNNECESSARY, UPDATED IN FATHER CLASSS "ENTITY"
+        """
 
-        # self.pose += np.array(self.vel_map[action])
-        # self.vel = np.array(self.vel_map[action])
-        action = 0
+        if self.guided:
+            # self.target_xy =
+            relative_distance = self.pose[0:2]-self.target_xy
+            target_angle = np.arctan2(relative_distance[0], relative_distance[1]) * 180/ np.pi  # angle to target in degrees
+            angle_delta = target_angle - self.pose[3]
 
-        return action
+        heading_angle = self.pose[3] * np.pi / 180.0  # heading in radians
+        delta_pose = self.pose[2] * np.array([np.cos(heading_angle), np.sin(heading_angle)])
+        self.pose[0:2] += delta_pose
 
 
-class EnemyCities():
 
-    def __init__(self, number = CONFIG.ENNEMY_CITIES.NUMBER, pose=np.array([0, CONFIG.ENNEMY_CITIES.INIT_HEIGHT_RANGE[0],
-                                CONFIG.ENNEMY_CITIES.SPEED, CONFIG.ENNEMY_CITIES.LAUNCH_THETA]), launch = 0, health=CONFIG.ENNEMY_CITIES.MAX_HEALTH):
+class Cities():
+
+    def __init__(self, number = CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES, pose=np.array([0, CONFIG.ENNEMY_CITIES.INIT_HEIGHT_RANGE[0],
+                                                                                      CONFIG.ENNEMY_CITIES.SPEED, CONFIG.ENNEMY_CITIES.LAUNCH_THETA]), launch = 0, health=CONFIG.ENNEMY_CITIES.MAX_HEALTH):
         # self.pose = np.tile(pose, (number, 1))
         self.pose = pose
         self.health = health * np.ones(number)
