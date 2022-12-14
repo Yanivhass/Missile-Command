@@ -484,7 +484,11 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         #     nb_missiles_destroyed
 
     def _compute_sensor_observation(self, sensor_type):
-        """Compute observation."""
+        """
+        Compute observation. Current game graphics.
+
+        """
+
 
         enemy_bats = self.enemy_batteries
         friendly_bats = self.friendly_batteries
