@@ -76,96 +76,44 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         '''
         Action space for the game
         '''
+        # Num_of_targets = CONFIG.DEFENDERS.QUANTITY + CONFIG.CITIES.QUANTITY
         self.action_space = spaces.Dict(
             # Actions of friendly units
             {'friends': spaces.Dict(
-                {'batteries': spaces.MultiBinary(CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES),
-                 # For the batteries there are only two actions for each battery: a missile has been
-                 # launched or not
-
+                {'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
+                 # movement [-1 = left, 0 = straight, 1 = right]
+                 'movement': spaces.MultiDiscrete([-1, 0, 1]*CONFIG.ATTACKERS.QUANTITY),
                  # Actions for the missiles:
                  'missiles': spaces.Dict(
                      {
                          # 'launch: 0 - None, 1 - launch,
-                         'launch': spaces.MultiDiscrete(
-                             [[
-                                  2] * CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES] * CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES),
-                         # 0 - battery target, 1 - missile - target
+                         'launch': spaces.MultiBinary(CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
+                         # target ID each missile is currently aiming at (including unfired missiles)
                          'enemy_tar': spaces.MultiDiscrete(
-                             [[
-                                  2] * CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES] * CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES),
-                         # 0 - non-attacker, 1- attacker
-                         'enemy_atc': spaces.MultiDiscrete(
-                             [[
-                                  2] * CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES] * CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES),
+                             CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
                          # which enemy is being attacked
-                         'actions': spaces.MultiDiscrete([[
-                                                              CONFIG.FRIENDLY_MISSILES.NB_ACTIONS] * CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES] * CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES),
-                         # A set which holds all of the possible actions
-                         'targets': spaces.MultiDiscrete([[[CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES,
-                                                            CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES]] * CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES] * CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES)
-                         # what is the target (which battery / city)
-
-                         #     spaces.Dict(
-                         #     {
-                         #         # 'bats': spaces.MultiDiscrete([[CONFIG.ENNEMY_BATTERY.NUMBER] * CONFIG.FRIENDLY_MISSILES.NUMBER] * CONFIG.FRIENDLY_BATTERY.NUMBER),
-                         #         'missiles': spaces.MultiDiscrete([[[CONFIG.ENNEMY_CITIES_BATTERY.NUMBER, CONFIG.ENNEMY_CITIES.NUMBER]]*CONFIG.FRIENDLY_MISSILES.NUMBER]*CONFIG.FRIENDLY_BATTERY.NUMBER)
-                         # })
                      }
                  )}),
-                # The enemies have a very similar action space
-                'enemies': spaces.Dict(
-                    {'batteries': spaces.MultiBinary(CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES),
-                     'missiles': spaces.Dict(
-                         {
-                             # 'launch: 0 - None, 1 - launch,
-                             'launch': spaces.MultiDiscrete(
-                                 [[
-                                      2] * CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES),
-                             # 0 - target bat, 1 - target missile
-                             'enemy_tar': spaces.MultiDiscrete(
-                                 [[
-                                      2] * CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES),
-                             'enemy_atc': spaces.MultiDiscrete(
-                                 [[
-                                      2] * CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES),
-                             'actions': spaces.MultiDiscrete([[
-                                                                  CONFIG.ENEMY_MISSILES.NB_ACTIONS] * CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES),
-                             'targets': spaces.MultiDiscrete([[[CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES,
-                                                                CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES]] * CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES)
-                             # spaces.Dict(
-                             # {
-                             #  'missiles': spaces.MultiDiscrete([[[CONFIG.FRIENDLY_BATTERY.NUMBER, CONFIG.FRIENDLY_MISSILES.NUMBER]] * CONFIG.ENEMY_MISSILES.NUMBER] * CONFIG.ENNEMY_BATTERY.NUMBER)
-                             #  # 'fr_bats': spaces.MultiDiscrete([[CONFIG.FRIENDLY_BATTERY.NUMBER] * CONFIG.ENEMY_MISSILES.NUMBER] * CONFIG.ENNEMY_BATTERY.NUMBER),
-                             #  # 'fr_missiles': spaces.MultiDiscrete([[CONFIG.FRIENDLY_MISSILES.NUMBER] * CONFIG.ENEMY_MISSILES.NUMBER] * CONFIG.ENNEMY_BATTERY.NUMBER)
-                             #  })
-                         }
-                     )}),
-                # cities also have similar action space
-                'cities': spaces.Dict(
-                    {
-                        'batteries': spaces.MultiBinary(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES),
-                        'missiles': spaces.Dict(
-                            {
-                                'launch': spaces.MultiDiscrete(
-                                    [[
-                                         2] * CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES),
-                                'enemy_tar': spaces.MultiDiscrete(
-                                    [[
-                                         2] * CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES),
-                                'enemy_atc': spaces.MultiDiscrete(
-                                    [[
-                                         2] * CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES),
-                                'actions': spaces.MultiDiscrete(
-                                    [[
-                                         2] * CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES] * CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES),
-
-                            })
-                    })
+                # # The enemies have a very similar action space
+                # 'enemies': spaces.Dict(
+                # {'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
+                #  # movement [-1 = left, 0 = straight, 1 = right]
+                #  'movement': spaces.Discrete(3, start=-1),
+                #  # Actions for the missiles:
+                #  'missiles': spaces.Dict(
+                #      {
+                #          # 'launch: 0 - None, 1 - launch,
+                #          'launch': spaces.MultiBinary(CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
+                #          # target ID each missile is currently aiming at (including unfired missiles)
+                #          'enemy_tar': spaces.MultiDiscrete(
+                #              CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
+                #          # which enemy is being attacked
+                #      }
+                #  )})
             }
         )
 
-        pose_boxmin = pose_boxmax = np.zeros((CONFIG.DEFENDERS.NUM_OF_BATTERIES, 4))
+        pose_boxmin = pose_boxmax = np.zeros((CONFIG.DEFENDERS.QUANTITY, 4))
         pose_boxmin[:] = np.array([0, 0, -1, -1])
         pose_boxmax[:] = np.array([CONFIG.WIDTH, CONFIG.HEIGHT, 1, 1])
 
@@ -312,11 +260,11 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
             range(CONFIG.DEFENDERS.QUANTITY)]
 
         # Attacker's units
-        Init_Height = np.array(CONFIG.ATTACKERS.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
-        Init_Pose = np.array(CONFIG.ATTACKERS.INIT_POS_RANGE) * CONFIG.WIDTH
+        init_height = np.array(CONFIG.ATTACKERS.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
+        init_pose = np.array(CONFIG.ATTACKERS.INIT_POS_RANGE) * CONFIG.WIDTH
 
-        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.ATTACKERS.QUANTITY)
-        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.ATTACKERS.QUANTITY)
+        bat_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.ATTACKERS.QUANTITY)
+        bat_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.ATTACKERS.QUANTITY)
 
         self.attackers = [FriendlyBattery(
             pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ATTACKERS.SPEED,
@@ -326,16 +274,16 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         self.target = Target()
 
         # Enemy cities
-        Init_Height = np.array(CONFIG.CITIES.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
-        Init_Pose = np.array(CONFIG.CITIES.INIT_POS_RANGE) * CONFIG.WIDTH
+        init_height = np.array(CONFIG.CITIES.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
+        init_pose = np.array(CONFIG.CITIES.INIT_POS_RANGE) * CONFIG.WIDTH
 
-        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.CITIES.NUM_OF_BATTERIES)
-        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.CITIES.NUM_OF_BATTERIES)
+        bat_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.CITIES.NUM_OF_BATTERIES)
+        bat_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.CITIES.NUM_OF_BATTERIES)
 
         self.cities = [CityBattery(pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.CITIES.SPEED,
-                                               CONFIG.CITIES.LAUNCH_THETA],
-                                         health=1.0, missiles=CONFIG.CITIES.NUM_OF_BATTERIES) for ind in
-                             range(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)]
+                                         CONFIG.CITIES.LAUNCH_THETA],
+                                   health=1.0, missiles=CONFIG.CITIES.NUM_OF_BATTERIES) for ind in
+                       range(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)]
 
         # cities_pose = np.zeros((CONFIG.ENNEMY_CITIES.NUMBER, 2))
         # cities_pose[:, 0] = np.random.uniform(CONFIG.WIDTH // 2, CONFIG.WIDTH, size=CONFIG.ENNEMY_CITIES.NUMBER)
@@ -585,28 +533,28 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
 
         #############  Iinit Enemy and Friendly batteries and missiles #############################################
         #  Enemy batteries and missiles
-        bat_pose_x = np.random.uniform(CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0] * CONFIG.WIDTH,
-                                       CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[1] * CONFIG.WIDTH,
-                                       size=CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES)
-        bat_pose_y = np.random.uniform(CONFIG.ENNEMY_BATTERY.INIT_HEIGHT_RANGE[0] * CONFIG.WIDTH,
-                                       CONFIG.ENNEMY_BATTERY.INIT_HEIGHT_RANGE[1] * CONFIG.WIDTH,
-                                       size=CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES)
-        self.enemy_batteries = [EnemyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA],
-            health=1.0, missiles=CONFIG.ENEMY_MISSILES.NUM_OF_BATTERIES) for ind in
-            range(CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES)]
+        bat_pose_x = np.random.uniform(CONFIG.DEFENDERS.INIT_POS_RANGE[0] * CONFIG.WIDTH,
+                                       CONFIG.DEFENDERS.INIT_POS_RANGE[1] * CONFIG.WIDTH,
+                                       size=CONFIG.DEFENDERS.QUANTITY)
+        bat_pose_y = np.random.uniform(CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[0] * CONFIG.WIDTH,
+                                       CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[1] * CONFIG.WIDTH,
+                                       size=CONFIG.DEFENDERS.QUANTITY)
+        self.defenders = [EnemyBattery(
+            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED, CONFIG.DEFENDERS.LAUNCH_THETA],
+            health=1.0, missiles=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
+            range(CONFIG.DEFENDERS.QUANTITY)]
 
         # Friendly bateries and missiles
-        Init_Height = np.array(CONFIG.FRIENDLY_BATTERY.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
-        Init_Pose = np.array(CONFIG.FRIENDLY_BATTERY.INIT_POS_RANGE) * CONFIG.WIDTH
-        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES)
-        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES)
+        Init_Height = np.array(CONFIG.ATTACKERS.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
+        Init_Pose = np.array(CONFIG.ATTACKERS.INIT_POS_RANGE) * CONFIG.WIDTH
+        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.ATTACKERS.NUM_OF_BATTERIES)
+        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.ATTACKERS.NUM_OF_BATTERIES)
 
         self.friendly_batteries = [FriendlyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.FRIENDLY_BATTERY.SPEED,
-                  CONFIG.FRIENDLY_BATTERY.LAUNCH_THETA], health=1.0,
+            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ATTACKERS.SPEED,
+                  CONFIG.ATTACKERS.LAUNCH_THETA], health=1.0,
             missiles=CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES) for ind in
-            range(CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES)]
+            range(CONFIG.ATTACKERS.NUM_OF_BATTERIES)]
         # self.target = Target()
 
         # Enemy cities
@@ -651,10 +599,10 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         # ------------------------------------------
         friendly_batteries_reward = 0
 
-        for fr_bat_id in range(CONFIG.FRIENDLY_BATTERY.NUM_OF_BATTERIES):
+        for fr_bat_id in range(CONFIG.ATTACKERS.QUANTITY):
             bat_act = 1
             if bat_act == 1:
-                friend_observation, friendly_battery_reward, done_friendly_battery, info = \
+                friend_observation, friendly_battery_reward, done_ATTACKERS, info = \
                     self.friendly_batteries[fr_bat_id].step(action['friends'], fr_bat_id,
                                                             self.observation['friends_bat'])
 

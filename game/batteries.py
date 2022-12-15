@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from config import CONFIG
-from game.missiles import EnemyMissiles, FriendlyMissiles, EnemyCities
+from game.missiles import Missile
 from utils import get_cv2_xy
 
 ############ dvel -15:15 deg in interval of 5 deg ##################################
@@ -17,7 +17,7 @@ from utils import get_cv2_xy
 #                     CONFIG.FRIENDLY_MISSILES.SPEED*np.sin(CONFIG.FRIENDLY_MISSILES.DTHETA))).transpose()
 # en_dvel = np.vstack((CONFIG.ENEMY_MISSILES.SPEED*np.cos(CONFIG.ENEMY_MISSILES.DTHETA),
 #                      CONFIG.ENEMY_MISSILES.SPEED*np.sin(CONFIG.ENEMY_MISSILES.DTHETA))).transpose()
-
+'''
 class CityBattery(EnemyCities):
     """Anti-missiles batteries class.
 
@@ -538,18 +538,18 @@ class EnemyBattery():
         #             thickness=-1,
         #         )
         # color = CONFIG.COLORS.EXPLOSION,
+'''
 
 
-class Entity:
-    """Anti-missiles batteries class.
+class Unit:
+    """
+    Either a battery or an aircraft.
 
-    Attributes:
-        NB_BATTERY (int): the number of batteries. It only supports 1 battery.
     """
     # NB_BATTERIES = 1
     MAX_HEALTH = 1.0
 
-    def __init__(self, pose, health, missiles):
+    def __init__(self, pose, health, missiles_count):
         """Initialize EnemyBatteriy battery.
 
         Attributes:
@@ -557,35 +557,22 @@ class Entity:
         """
         self.pose = pose
         self.health = health
-        self.missiles_number = missiles
+        self.missiles_number = missiles_count
 
-        missiles_pose = np.tile(pose, (missiles, 1))
+        self.missiles = [Missile(
+            pose=pose,  # All missiles are initialized in the unit's magazine
+            health=1.0)
+            for ind in missiles_count]
 
-        self.missiles = [FriendlyMissiles(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED, CONFIG.DEFENDERS.LAUNCH_THETA],
-            health=1.0, missiles=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
-            range(CONFIG.DEFENDERS.QUANTITY)]
-
-        self.missiles = EnemyMissiles(pose=missiles_pose, health=self.health, number = missiles)
-
-    def reset(self, pose = (CONFIG.ENNEMY_BATTERY.INIT_POS_RANGE[0]*CONFIG.WIDTH, 0.0, CONFIG.ENNEMY_BATTERY.SPEED, CONFIG.ENNEMY_BATTERY.LAUNCH_THETA),
-              health=CONFIG.ENNEMY_BATTERY.MAX_HEALTH):
-
-        """Reset batteries.
-
-        Total number of missiles is reset to default.
-
-        Warning:
-            To fully initialize a Batteries object, init function and reset
-            function musts be called.
-        """
+    def reset(self, pose, health, missiles_count):
         self.pose = pose
         self.health = health
+        self.missiles_number = missiles_count
 
-        missiles_pose = np.tile(pose, (self.missiles_number, 1))
-
-        self.missiles.reset(pose=missiles_pose, health=health)
-
+        self.missiles = [Missile(
+            pose=pose,  # All missiles are initialized in the unit's magazine
+            health=1.0)
+            for ind in missiles_count]
 
     def step(self, action, bat_id, self_observation):
         """Go from current step to next one.
@@ -593,20 +580,11 @@ class Entity:
         The missile launched is done in the main environment class.
 
         Args:
-            action (int): (0) do nothing, (1) fire missile,
-            (2) target up, (3) target down, (4), target left, (5) target right,
-            (6) target_left_up, (7) target_left_down, (8) target_right_up, (9) target_right_down
+            action:
+            movement - [-1 = left, 0 = straight, 1 = right]
+            launch - binary array of missiles to launch
+            targets - array, target IDs for each missile
 
-        Returns:
-            observation: None.
-
-            reward: None.
-
-            done: None.
-
-            info (dict): additional information of the current time step. It
-                contains key "can_fire" with associated value "True" if the
-                anti-missile battery can fire a missile and "False" otherwise.
         """
 
         ########## THIS IS DONE EXTERNALLY _ SO THAT BATTERY REMAINS THE SAME #################
@@ -616,14 +594,14 @@ class Entity:
 
         ########## update battery pose and non launched missiles #########
         angle = self.pose[3] * np.pi / 180.0
-        bat_dpos = self.pose[2] * np.array([np.cos(angle), np.sin(angle)])
-        self.pose[0:2] += bat_dpos
+        delta_pose = self.pose[2] * np.array([np.cos(angle), np.sin(angle)])
+        self.pose[0:2] += delta_pose
 
         ################# update launched missiles ########################
         ####### find launch n lauch - per batery id #######################
         # launch_indices = np.where( np.logical_and((action['missiles']['launch'][bat_id] == 1), (self.missiles.launch == False)) == True)
-        new_launch_indices = np.where(action['missiles']['launch'][bat_id] == 1)
-        self.missiles.launch[new_launch_indices] = 1
+        new_launch_indices = np.where(action['launch'] == 1)
+        self.missiles[new_launch_indices].launch = 1
         launch_indices = np.where(self.missiles.launch == 1)
         ######### update observation #######################
         self_observation['missiles']['launch'][bat_id, new_launch_indices] = 1

@@ -146,81 +146,9 @@ from utils import get_cv2_xy
 #         return action
 
 
-class Missile():
-
-    def __init__(self, pose, health):
-        self.pose = pose  # [x,y,z,heading angle in degrees]
-        self.health = health
-        self.launched = False
-        self.target = []
-        self.target_xy = np.zeros(2, 1)
-        self.guided = False
-
-
-    def reset(self, pose, health):
-        self.pose[:] = pose
-        self.health[:] = health
-        self.launched = False
-        # self.enemy_tar[:] = False
-        # self.enemy_atc[:] = False
-        # self.targets['bats'][:] = 0
-        # self.targets['missiles'][:] = 0
-        # self.targets['city_bats'][:] = 0
-        # self.targets['city_missiles'][:] = 0
-
-    def step(self):
-        """
-        The missile steers itself towards it's target
-        UNNECESSARY, UPDATED IN FATHER CLASSS "ENTITY"
-        """
-
-        if self.guided:
-            # self.target_xy =
-            relative_distance = self.pose[0:2]-self.target_xy
-            target_angle = np.arctan2(relative_distance[0], relative_distance[1]) * 180/ np.pi  # angle to target in degrees
-            angle_delta = target_angle - self.pose[3]
-
-        heading_angle = self.pose[3] * np.pi / 180.0  # heading in radians
-        delta_pose = self.pose[2] * np.array([np.cos(heading_angle), np.sin(heading_angle)])
-        self.pose[0:2] += delta_pose
-
-
-
-class Cities():
-
-    def __init__(self, number = CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES, pose=np.array([0, CONFIG.ENNEMY_CITIES.INIT_HEIGHT_RANGE[0],
-                                                                                      CONFIG.ENNEMY_CITIES.SPEED, CONFIG.ENNEMY_CITIES.LAUNCH_THETA]), launch = 0, health=CONFIG.ENNEMY_CITIES.MAX_HEALTH):
-        # self.pose = np.tile(pose, (number, 1))
-        self.pose = pose
-        self.health = health * np.ones(number)
-        self.launch = launch*np.ones(number, dtype=bool)
-        self.enemy_tar = np.zeros(number, dtype=bool)
-        self.enemy_atc = np.zeros(number, dtype=bool)
-
-        self.attackers = {
-            'fr_missiles': np.zeros((number, 2), dtype=int)
-            # 'fr_bats': np.zeros((number), dtype=int),
-            # 'fr_missiles': np.zeros((number), dtype=int)
-        }
-
-    def reset(self, pose=np.array([0, CONFIG.ENNEMY_CITIES.INIT_HEIGHT_RANGE[0],
-                                CONFIG.ENNEMY_CITIES.SPEED, CONFIG.ENNEMY_CITIES.LAUNCH_THETA]), health=CONFIG.ENNEMY_CITIES.MAX_HEALTH):
-        self.pose[:] = pose
-        self.health[:] = health
-        self.launch[:] = 1
-        self.enemy_tar[:] = False
-        self.enemy_atc[:] = False
-        # self.targets[:] = 0
-        # self.attacker['fr_bats'][:] = 0
-        self.attacker['fr_missiles'][:] = 0
-
-    def step(self, action, target):
-
-        # self.pose += np.array(self.vel_map[action])
-        # self.vel = np.array(self.vel_map[action])
-        action = 0
-
-        return action
+    # def step(self):
+    #
+    #     return action
 
 
 # class EnemyMissiles():

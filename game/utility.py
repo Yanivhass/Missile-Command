@@ -29,88 +29,88 @@ def action_reset(action):
     action['friends']['missiles']['enemy_atc'][:] = False
 
 
-def _vector_distance(veca, vecb,  num_extract = None, expl_dist = None, veca_targets = None, switch = False):
-    """
-
-    compute distances between all pairs.
-    """
-
-    # Align vectors
-    veca_dup = np.repeat(veca, vecb.shape[0], axis=0)
-    vecb_dup = np.tile(vecb, reps=[veca.shape[0], 1])
-
-    # Compute distances
-    dx = vecb_dup[:, 0] - veca_dup[:, 0]
-    dy = vecb_dup[:, 1] - veca_dup[:, 1]
-    distances = np.sqrt(np.square(dx) + np.square(dy))
-
-    distances_ab = np.reshape(
-        distances,
-        (veca.shape[0], vecb.shape[0]),
-    )
-
-    if switch:
-
-        veca_inds = np.random.sample(np.arange(veca.shape[0]), veca.shape[0]//2)
-        veca_targ = veca_targets[veca_inds]
-        min_b = np.argmin(distances_ab, axis = 1)
-        t = 1
-
-        return
-
-
-        return np.array(min_ind_a), np.array(min_ind_b), _, _, _
-
-    # Get vectors indices inside an explosion radius
-    empty_arr = np.zeros((2,2))
-    if expl_dist != None:
-        inside_radius_indices = np.where(distances_ab <= expl_dist)
-    else:
-        inside_radius_indices = [[],[]]
-
-    ################################# filter minimal distance objects #################################
-    if num_extract != None:
-        num_extract = min(num_extract, distances.shape[0])
-        min_val_indices = np.argsort(distances) #[-num_extract:]
-        min_val_indices_b = min_val_indices//veca.shape[0]
-        min_val_indices_a = min_val_indices% veca.shape[0] #min_val_indices - min_val_indices_b*veca.shape[0]
-        ind, i = 1, 1
-        min_ind_a, min_ind_b = [min_val_indices_a[0]], [min_val_indices_b[0]]
-        while (ind < num_extract) and (i < min_val_indices_b.shape[0]) :
-            if (min_val_indices_a[i] not in min_ind_a) and (min_val_indices_b[i] not in min_ind_b):
-                min_ind_a.append(min_val_indices_a[i])
-                min_ind_b.append(min_val_indices_b[i])
-                ind += 1
-            i += 1
-
-    else:
-        min_ind_b = min_ind_a = empty_arr[0]
-
-
-
-    # inside_radius = distances <= (
-    #         vecb_dup[:, 2] + CONFIG.ENEMY_MISSILES.RADIUS)
-    # inside_radius = inside_radius.astype(int)
-    # inside_radius = np.reshape(
-    #     inside_radius,
-    #     (veca.shape[0], vecb.shape[0]),
-    # )
-
-    # Remove theses missiles
-    # indices = np.argwhere(np.sum(inside_radius, axis=1) >= 1)
-
-    # self.enemy_missiles.enemy_missiles = np.delete(
-    #     self.enemy_missiles.enemy_missiles,
-    #     np.squeeze(missiles_out),
-    #     axis=0,
-    # )
-    #
-    # # Compute current reward
-    # nb_missiles_destroyed = missiles_out.shape[0]
-    # self.reward_timestep += CONFIG.REWARD.DESTROYED_ENEMEY_MISSILES * \
-    #                         nb_missiles_destroyed
-
-    return np.array(min_ind_a), np.array(min_ind_b), inside_radius_indices[0], inside_radius_indices[1], distances_ab
+# def _vector_distance(veca, vecb,  num_extract = None, expl_dist = None, veca_targets = None, switch = False):
+#     """
+#
+#     compute distances between all pairs.
+#     """
+#
+#     # Align vectors
+#     veca_dup = np.repeat(veca, vecb.shape[0], axis=0)
+#     vecb_dup = np.tile(vecb, reps=[veca.shape[0], 1])
+#
+#     # Compute distances
+#     dx = vecb_dup[:, 0] - veca_dup[:, 0]
+#     dy = vecb_dup[:, 1] - veca_dup[:, 1]
+#     distances = np.sqrt(np.square(dx) + np.square(dy))
+#
+#     distances_ab = np.reshape(
+#         distances,
+#         (veca.shape[0], vecb.shape[0]),
+#     )
+#
+#     if switch:
+#
+#         veca_inds = np.random.sample(np.arange(veca.shape[0]), veca.shape[0]//2)
+#         veca_targ = veca_targets[veca_inds]
+#         min_b = np.argmin(distances_ab, axis = 1)
+#         t = 1
+#
+#         return
+#
+#
+#         return np.array(min_ind_a), np.array(min_ind_b), _, _, _
+#
+#     # Get vectors indices inside an explosion radius
+#     empty_arr = np.zeros((2,2))
+#     if expl_dist != None:
+#         inside_radius_indices = np.where(distances_ab <= expl_dist)
+#     else:
+#         inside_radius_indices = [[],[]]
+#
+#     ################################# filter minimal distance objects #################################
+#     if num_extract != None:
+#         num_extract = min(num_extract, distances.shape[0])
+#         min_val_indices = np.argsort(distances) #[-num_extract:]
+#         min_val_indices_b = min_val_indices//veca.shape[0]
+#         min_val_indices_a = min_val_indices% veca.shape[0] #min_val_indices - min_val_indices_b*veca.shape[0]
+#         ind, i = 1, 1
+#         min_ind_a, min_ind_b = [min_val_indices_a[0]], [min_val_indices_b[0]]
+#         while (ind < num_extract) and (i < min_val_indices_b.shape[0]) :
+#             if (min_val_indices_a[i] not in min_ind_a) and (min_val_indices_b[i] not in min_ind_b):
+#                 min_ind_a.append(min_val_indices_a[i])
+#                 min_ind_b.append(min_val_indices_b[i])
+#                 ind += 1
+#             i += 1
+#
+#     else:
+#         min_ind_b = min_ind_a = empty_arr[0]
+#
+#
+#
+#     # inside_radius = distances <= (
+#     #         vecb_dup[:, 2] + CONFIG.ENEMY_MISSILES.RADIUS)
+#     # inside_radius = inside_radius.astype(int)
+#     # inside_radius = np.reshape(
+#     #     inside_radius,
+#     #     (veca.shape[0], vecb.shape[0]),
+#     # )
+#
+#     # Remove theses missiles
+#     # indices = np.argwhere(np.sum(inside_radius, axis=1) >= 1)
+#
+#     # self.enemy_missiles.enemy_missiles = np.delete(
+#     #     self.enemy_missiles.enemy_missiles,
+#     #     np.squeeze(missiles_out),
+#     #     axis=0,
+#     # )
+#     #
+#     # # Compute current reward
+#     # nb_missiles_destroyed = missiles_out.shape[0]
+#     # self.reward_timestep += CONFIG.REWARD.DESTROYED_ENEMEY_MISSILES * \
+#     #                         nb_missiles_destroyed
+#
+#     return np.array(min_ind_a), np.array(min_ind_b), inside_radius_indices[0], inside_radius_indices[1], distances_ab
 
 
 
