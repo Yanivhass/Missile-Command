@@ -1,0 +1,19 @@
+{
+  "state space": {
+    "defenders": {
+      "pose": "pose holds the position of each battery",
+      "health": "the hp each battery has",
+      "missiles": {
+        "launched": "binary. Tells if this missile was already launched",
+        "target": "int. The target id for this missile",
+        "pose": ""
+      }
+    }
+  },
+  "Matrices": "Matrices used in internal environment functions",
+  "defenders": "columns are [id, x, y, velocity, direction, health, num of missiles, target_id]",
+  "defender missiles" : "columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]",
+  "attackers": "columns are [id, x, y, velocity, direction, health, num of missiles, target_id]",
+  "attackers missiles": "# columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]",
+  "cities": "columns are [id, x, y, health]"
+}

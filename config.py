@@ -55,8 +55,8 @@ class CONFIG():
 
             NB_ACTIONS: int = 9
             LAUNCH_THETA: float = 90
-            DTHETA = np.arange(-10, 25, 5) \
- \
+            DTHETA = np.arange(-10, 25, 5)
+
     @dataclass
     class ATTACKERS:
         """Atack-missiles battery configuration.
@@ -87,8 +87,6 @@ class CONFIG():
             EXPLOSION_RADIUS: float = 50
             PROBA_IN: float = 0.005
             MAX_HEALTH = 1
-
-            NB_ACTIONS: int = 9
             SPEED: float = 20.0
             LAUNCH_THETA: float = 0
             DTHETA = np.arange(-10, 25, 5)

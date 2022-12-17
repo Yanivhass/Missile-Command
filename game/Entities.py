@@ -45,14 +45,18 @@ class Missile:
 
 class City:
 
-    def __init__(self, pose, health):
+    def __init__(self, id, pose, health):
         # self.pose = np.tile(pose, (number, 1))
+        self.id = id
         self.pose = pose
         self.health = health
 
     def reset(self, pose, health):
         self.pose = pose
         self.health = health
+
+    def step(self):
+        None
 
 
 class Unit:
@@ -63,12 +67,13 @@ class Unit:
     # NB_BATTERIES = 1
     MAX_HEALTH = 1.0
 
-    def __init__(self, pose, health, missiles_count):
+    def __init__(self, id, pose, health, missiles_count):
         """Initialize EnemyBatteriy battery.
 
         Attributes:
 
         """
+        self.id = id
         self.pose = pose
         self.health = health
         self.missiles_number = missiles_count
@@ -88,7 +93,7 @@ class Unit:
             health=1.0)
             for ind in missiles_count]
 
-    def step(self, action, bat_id, self_observation):
+    def step(self, action, unit_id, observation):
         """Go from current step to next one.
 
         The missile launched is done in the main environment class.
@@ -118,7 +123,7 @@ class Unit:
         self.missiles[new_launch_indices].launch = 1
         launch_indices = np.where(self.missiles.launch == 1)
         ######### update observation #######################
-        self_observation['missiles']['launch'][bat_id, new_launch_indices] = 1
+        observation['missiles']['launch'][bat_id, new_launch_indices] = 1
 
         ######### update targets ##########################
         self.missiles.targets['missiles'][launch_indices] = action['missiles']['targets'][bat_id][
@@ -182,7 +187,7 @@ class Unit:
 
 
 
- def render(self, observation, health):
+def render(self, observation, health):
         """Render anti-missiles batteries.
 
         Todo:

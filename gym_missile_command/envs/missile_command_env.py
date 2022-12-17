@@ -8,7 +8,8 @@ from gym import spaces
 from PIL import Image
 
 from config import CONFIG
-from game.batteries import EnemyBattery, FriendlyBattery, CityBattery
+from game.Entities import Unit, City, Missile
+# from game.batteries import EnemyBattery, FriendlyBattery, CityBattery
 from game.cities import EnemyCities
 # from gym_missile_command.game.missile import EnemyMissiles, FriendlyMissiles
 from game.target import Target
@@ -19,7 +20,24 @@ with contextlib.redirect_stdout(None):
     import pygame
 
 
-class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
+def get_missiles_to_launch(missiles_list, launching_unit_id):
+    ready_missiles = np.argwhere(not missiles_list[:, 8])
+    ready_missiles = missiles_list[ready_missiles, :]
+    _, idx = np.unique(ready_missiles[:, 1], return_index=True)
+    ready_missiles = ready_missiles[idx, :]
+    missiles_to_launch = ready_missiles[np.isin(ready_missiles[:, 1], launching_unit_id)]
+    missiles_to_launch = missiles_to_launch[:, 0]  # id of missiles to launch
+    return missiles_to_launch
+
+def get_movement(velocity, angles, action):
+    angles[np.argwhere(action == -1)] = angles[np.argwhere(action == -1)] + 10 # turn left 10 degrees
+    angles[np.argwhere(action == 1)] = angles[np.argwhere(action == 1)] - 10 # turn right 10 degrees
+    angles = np.mod(angles,360)
+    angles = angles * np.pi / 180.0  # degreess to rads
+    delta = (velocity * np.array([np.cos(angles), np.sin(angles)])).transpose()
+    return [delta, velocity, angles]
+
+class MissileCommandEnv(gym.Env):
     """Missile Command Gym environment.
 
     Attributes:
@@ -76,40 +94,47 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         '''
         Action space for the game
         '''
-        # Num_of_targets = CONFIG.DEFENDERS.QUANTITY + CONFIG.CITIES.QUANTITY
+        num_of_targets = CONFIG.DEFENDERS.QUANTITY + CONFIG.CITIES.QUANTITY
+        attacker_targets = np.ones((1, CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY)) * num_of_targets
+        # attacker_targets[:,1] = num_of_targets
+        num_of_targets = CONFIG.ATTACKERS.QUANTITY
+        defender_targets = np.ones((1, CONFIG.DEFENDERS.MISSILES_PER_UNIT * CONFIG.DEFENDERS.QUANTITY)) * num_of_targets
+        # defender_targets[:, 1] = num_of_targets
         self.action_space = spaces.Dict(
-            # Actions of friendly units
-            {'friends': spaces.Dict(
-                {'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
-                 # movement [-1 = left, 0 = straight, 1 = right]
-                 'movement': spaces.MultiDiscrete([-1, 0, 1]*CONFIG.ATTACKERS.QUANTITY),
-                 # Actions for the missiles:
-                 'missiles': spaces.Dict(
-                     {
-                         # 'launch: 0 - None, 1 - launch,
-                         'launch': spaces.MultiBinary(CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
-                         # target ID each missile is currently aiming at (including unfired missiles)
-                         'enemy_tar': spaces.MultiDiscrete(
-                             CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
-                         # which enemy is being attacked
-                     }
-                 )}),
-                # # The enemies have a very similar action space
-                # 'enemies': spaces.Dict(
-                # {'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
-                #  # movement [-1 = left, 0 = straight, 1 = right]
-                #  'movement': spaces.Discrete(3, start=-1),
-                #  # Actions for the missiles:
-                #  'missiles': spaces.Dict(
-                #      {
-                #          # 'launch: 0 - None, 1 - launch,
-                #          'launch': spaces.MultiBinary(CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
-                #          # target ID each missile is currently aiming at (including unfired missiles)
-                #          'enemy_tar': spaces.MultiDiscrete(
-                #              CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
-                #          # which enemy is being attacked
-                #      }
-                #  )})
+            # Actions, currently only for attackers
+            {'attackers': spaces.Dict(
+                {
+                    # 'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
+                    # movement [-1 = left, 0 = straight, 1 = right]
+                    'movement': spaces.MultiDiscrete([-1, 0, 1] * CONFIG.ATTACKERS.QUANTITY),
+                    # Actions for the missiles:
+                    'missiles': spaces.Dict(
+                        {
+                            # 'launch: 0 - None, 1 - launch,
+                            'launch': spaces.MultiBinary(
+                                CONFIG.ATTACKERS.MISSILES_PER_UNIT * CONFIG.ATTACKERS.QUANTITY),
+                            # target ID each missile is currently aiming at (including unfired missiles)
+                            'enemy_tar': spaces.MultiDiscrete(attacker_targets),
+                            # which enemy is being attacked
+                        }
+                    )
+                }),
+                'defenders': spaces.Dict(
+                    {
+                        # 'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
+                        # movement [-1 = left, 0 = straight, 1 = right]
+                        'movement': spaces.MultiDiscrete([-1, 0, 1] * CONFIG.DEFENDERS.QUANTITY),
+                        # Actions for the missiles:
+                        'missiles': spaces.Dict(
+                            {
+                                # 'launch: 0 - None, 1 - launch,
+                                'launch': spaces.MultiBinary(
+                                    CONFIG.DEFENDERS.MISSILES_PER_UNIT * CONFIG.DEFENDERS.QUANTITY),
+                                # target ID each missile is currently aiming at (including unfired missiles)
+                                'enemy_tar': spaces.MultiDiscrete(defender_targets),
+                                # which enemy is being attacked
+                            }
+                        )})
             }
         )
 
@@ -134,11 +159,11 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
                             # Each missile's target is the entity number
                             'target': spaces.MultiDiscrete(
                                 [CONFIG.ATTACKERS.QUANTITY] * CONFIG.DEFENDERS.QUANTITY),
-                            # pose is [x,y,z,heading angle]
+                            # pose is [x,y,velocity,heading angle]
                             'pose': spaces.Box(pose_boxmin, pose_boxmax, shape=(CONFIG.DEFENDERS.QUANTITY, 4)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(CONFIG.DEFENDERS.QUANTITY *
-                                                         CONFIG.DEFENDERS.MISSILES_PER_UNIT),
+                                                         CONFIG.DEFENDERS.MISSILES_PER_UNIT)
                         }),
                     }),
                     # cities are immobile and have no action
@@ -246,7 +271,7 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         #     }
         # }
 
-        #############  Iinit Enemy and Friendly batteries and missiles #############################################
+        #############  Init Enemy and Friendly batteries and missiles #############################################
         # Defender's units
         bat_pose_x = np.random.uniform(CONFIG.DEFENDERS.INIT_POS_RANGE[0] * CONFIG.WIDTH,
                                        CONFIG.DEFENDERS.INIT_POS_RANGE[1] * CONFIG.WIDTH,
@@ -254,10 +279,56 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         bat_pose_y = np.random.uniform(CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[0] * CONFIG.WIDTH,
                                        CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[1] * CONFIG.WIDTH,
                                        size=CONFIG.DEFENDERS.QUANTITY)
-        self.defenders = [EnemyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED, CONFIG.DEFENDERS.LAUNCH_THETA],
-            health=1.0, missiles=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
-            range(CONFIG.DEFENDERS.QUANTITY)]
+        # self.defenders = [Unit(
+        #     pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED, CONFIG.DEFENDERS.LAUNCH_THETA],
+        #     health=1.0, missiles_count=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
+        #     range(CONFIG.DEFENDERS.QUANTITY)]
+
+        # defender team units
+        # columns are [id, x, y, velocity, direction, health, num of missiles, target_id]
+        id_offset = 0
+        self.defenders = np.zeros((CONFIG.DEFENDERS.QUANTITY, 8))
+        self.defenders[:, 0] = np.arange(CONFIG.DEFENDERS.QUANTITY)
+        self.defenders[:, 1] = bat_pose_x
+        self.defenders[:, 2] = bat_pose_y
+        self.defenders[:, 3] = CONFIG.DEFENDERS.SPEED
+        self.defenders[:, 4] = CONFIG.DEFENDERS.LAUNCH_THETA
+        self.defenders[:, 5] = 1
+        self.defenders[:, 6] = CONFIG.DEFENDERS.MISSILES_PER_UNIT
+        id_offset += CONFIG.DEFENDERS.QUANTITY
+
+        # defender cities
+        init_height = np.array(CONFIG.CITIES.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
+        init_pose = np.array(CONFIG.CITIES.INIT_POS_RANGE) * CONFIG.WIDTH
+        city_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.CITIES.QUANTITY)
+        city_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.CITIES.QUANTITY)
+
+        # self.cities = [City(pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.CITIES.SPEED,
+        #                           CONFIG.CITIES.LAUNCH_THETA],
+        #                     health=1.0) for ind in
+        #                range(CONFIG.QUANTITY.NUM_OF_BATTERIES)]
+        # columns are [id, x, y, health]
+        self.cities = np.zeros((CONFIG.CITIES.QUANTITY, 5))
+        self.cities[:, 0] = np.arange(CONFIG.CITIES.QUANTITY) + id_offset
+        self.cities[:, 1] = city_pose_x
+        self.cities[:, 2] = city_pose_y
+        self.cities[:, 3] = 1
+        id_offset += CONFIG.CITIES.QUANTITY
+
+        # defender missiles
+
+        missiles_id = np.arange(CONFIG.DEFENDERS.QUANTITY*CONFIG.DEFENDERS.MISSILES_PER_UNIT) + id_offset
+        # columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]
+        self.defenders_missiles = np.zeros((CONFIG.DEFENDERS.QUANTITY, 8))
+        self.defenders_missiles[:, 0] = np.arange(CONFIG.DEFENDERS.QUANTITY)  # parent id
+        self.defenders_missiles[:, 1] = bat_pose_x
+        self.defenders_missiles[:, 2] = bat_pose_y
+        self.defenders_missiles[:, 3] = CONFIG.DEFENDERS.SPEED
+        self.defenders_missiles[:, 4] = CONFIG.DEFENDERS.LAUNCH_THETA
+        self.defenders_missiles[:, 5] = 1
+        self.defenders_missiles[:, 6] = 0
+        self.defenders_missiles = np.tile(self.defenders_missiles, (CONFIG.DEFENDERS.MISSILES_PER_UNIT,1))
+        self.defenders_missiles = [missiles_id, self.defenders_missiles]
 
         # Attacker's units
         init_height = np.array(CONFIG.ATTACKERS.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
@@ -266,24 +337,30 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         bat_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.ATTACKERS.QUANTITY)
         bat_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.ATTACKERS.QUANTITY)
 
-        self.attackers = [FriendlyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ATTACKERS.SPEED,
-                  CONFIG.ATTACKERS.LAUNCH_THETA],
-            health=1.0, missiles=CONFIG.ATTACKERS.MISSILES_PER_UNIT) for ind in
-            range(CONFIG.ATTACKERS.QUANTITY)]
-        self.target = Target()
+        # columns are [id, x, y, velocity, direction, health, num of missiles, target_id]
+        id_offset = 0
+        self.attackers = np.zeros((CONFIG.ATTACKERS.QUANTITY, 8))
+        self.attackers[:, 0] = np.arange(CONFIG.ATTACKERS.QUANTITY)
+        self.attackers[:, 1] = bat_pose_x
+        self.attackers[:, 2] = bat_pose_y
+        self.attackers[:, 3] = CONFIG.ATTACKERS.SPEED
+        self.attackers[:, 4] = CONFIG.ATTACKERS.LAUNCH_THETA
+        self.attackers[:, 5] = 1
+        self.attackers[:, 6] = CONFIG.ATTACKERS.MISSILES_PER_UNIT
+        id_offset += CONFIG.ATTACKERS.QUANTITY
 
-        # Enemy cities
-        init_height = np.array(CONFIG.CITIES.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
-        init_pose = np.array(CONFIG.CITIES.INIT_POS_RANGE) * CONFIG.WIDTH
-
-        bat_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.CITIES.NUM_OF_BATTERIES)
-        bat_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.CITIES.NUM_OF_BATTERIES)
-
-        self.cities = [CityBattery(pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.CITIES.SPEED,
-                                         CONFIG.CITIES.LAUNCH_THETA],
-                                   health=1.0, missiles=CONFIG.CITIES.NUM_OF_BATTERIES) for ind in
-                       range(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)]
+        missiles_id = np.arange(CONFIG.DEFENDERS.QUANTITY * CONFIG.DEFENDERS.MISSILES_PER_UNIT) + id_offset
+        # columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]
+        self.attackers_missiles = np.zeros((CONFIG.DEFENDERS.QUANTITY, 8))
+        self.attackers_missiles[:, 0] = np.arange(CONFIG.DEFENDERS.QUANTITY)  # parent id
+        self.attackers_missiles[:, 1] = bat_pose_x
+        self.attackers_missiles[:, 2] = bat_pose_y
+        self.attackers_missiles[:, 3] = CONFIG.DEFENDERS.SPEED
+        self.attackers_missiles[:, 4] = CONFIG.DEFENDERS.LAUNCH_THETA
+        self.attackers_missiles[:, 5] = 1
+        self.attackers_missiles[:, 6] = 0
+        self.attackers_missiles = np.tile(self.attackers_missiles, (CONFIG.DEFENDERS.MISSILES_PER_UNIT, 1))
+        self.attackers_missiles = [missiles_id, self.attackers_missiles]
 
         # cities_pose = np.zeros((CONFIG.ENNEMY_CITIES.NUMBER, 2))
         # cities_pose[:, 0] = np.random.uniform(CONFIG.WIDTH // 2, CONFIG.WIDTH, size=CONFIG.ENNEMY_CITIES.NUMBER)
@@ -539,47 +616,55 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         bat_pose_y = np.random.uniform(CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[0] * CONFIG.WIDTH,
                                        CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[1] * CONFIG.WIDTH,
                                        size=CONFIG.DEFENDERS.QUANTITY)
-        self.defenders = [EnemyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED, CONFIG.DEFENDERS.LAUNCH_THETA],
-            health=1.0, missiles=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
-            range(CONFIG.DEFENDERS.QUANTITY)]
 
-        # Friendly bateries and missiles
+        self.defenders = [Unit(id=ind,
+                               pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.DEFENDERS.SPEED,
+                                     CONFIG.DEFENDERS.LAUNCH_THETA],
+                               health=1.0, missiles_count=CONFIG.DEFENDERS.MISSILES_PER_UNIT) for ind in
+                          range(CONFIG.DEFENDERS.QUANTITY)]
+
+        # Attacker units and missiles
         Init_Height = np.array(CONFIG.ATTACKERS.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
         Init_Pose = np.array(CONFIG.ATTACKERS.INIT_POS_RANGE) * CONFIG.WIDTH
-        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.ATTACKERS.NUM_OF_BATTERIES)
-        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.ATTACKERS.NUM_OF_BATTERIES)
+        bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.ATTACKERS.QUANTITY)
+        bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1], CONFIG.ATTACKERS.QUANTITY)
 
-        self.friendly_batteries = [FriendlyBattery(
-            pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ATTACKERS.SPEED,
-                  CONFIG.ATTACKERS.LAUNCH_THETA], health=1.0,
-            missiles=CONFIG.FRIENDLY_MISSILES.NUM_OF_BATTERIES) for ind in
-            range(CONFIG.ATTACKERS.NUM_OF_BATTERIES)]
+        self.attackers = [Unit(id=ind,
+                               pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ATTACKERS.SPEED,
+                                     CONFIG.ATTACKERS.LAUNCH_THETA], health=1.0,
+                               missiles_count=CONFIG.ATTACKERS.QUANTITY) for ind in
+                          range(CONFIG.ATTACKERS.QUANTITY)]
         # self.target = Target()
 
         # Enemy cities
-        Init_Height = np.array(CONFIG.ENNEMY_CITIES_BATTERY.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
-        Init_Pose = np.array(CONFIG.ENNEMY_CITIES_BATTERY.INIT_POS_RANGE) * CONFIG.WIDTH
-        if CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES == 1:
+        Init_Height = np.array(CONFIG.CITIES.INIT_HEIGHT_RANGE) * CONFIG.HEIGHT
+        Init_Pose = np.array(CONFIG.CITIES.INIT_POS_RANGE) * CONFIG.WIDTH
+        if CONFIG.CITIES.QUANTITY == 1:
             bat_pose_x, bat_pose_y = [Init_Pose[0]], [Init_Height[0]]
         else:
-            bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)
+            bat_pose_x = np.random.uniform(Init_Pose[0], Init_Pose[1], CONFIG.CITIES.QUANTITY)
             bat_pose_y = np.random.uniform(Init_Height[0], Init_Height[1],
-                                           CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)
+                                           CONFIG.CITIES.QUANTITY)
 
-        self.enemy_cities = [CityBattery(pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.ENNEMY_CITIES_BATTERY.SPEED,
-                                               CONFIG.ENNEMY_CITIES_BATTERY.LAUNCH_THETA], health=1.0,
-                                         launch=1, missiles=CONFIG.ENNEMY_CITIES.NUM_OF_BATTERIES) for ind in
-                             range(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES)]
+        self.enemy_cities = [City(id=ind + CONFIG.ATTACKERS.QUANTITY,
+                                  pose=[bat_pose_x[ind], bat_pose_y[ind], CONFIG.CITIES.SPEED,
+                                        CONFIG.CITIES.LAUNCH_THETA], health=1.0) for ind in
+                             range(CONFIG.CITIES.QUANTITY)]
         #################################################################################################################
 
         return self._extract_observation()
 
     def step(self, action):
-        """Go from current step to next one.
+        """
+        Go from current step to next one. Missile command step includes:
+        1. Update movements according to given actions
+        2. Check for collisions
+        3. Update entities according to collisions
+        4. Calculate step reward
+
 
         Args:
-            action (int): 0, 1, 2, 3, 4 or 9, the different actions, per friendly N missiles - total [N,10]
+
 
         Returns:
             observation (numpy.array): the processed observation.
@@ -598,41 +683,48 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         # Step functions: update state
         # ------------------------------------------
         friendly_batteries_reward = 0
+        attackers_units_pose = np.zeros(len(self.attackers), 2)
+        attackers_missiles_pose = np.zeros(len(self.attackers) * CONFIG.ATTACKERS.MISSILES_PER_UNIT, 2)
+        defenders_units_pose = np.zeros(len(self.defenders), 2)
+        defenders_missiles_pose = np.zeros(len(self.defenders) * CONFIG.DEFENDERS.MISSILES_PER_UNIT, 2)
+        cities_pose = self.cities[:].pose[0:2]
 
-        for fr_bat_id in range(CONFIG.ATTACKERS.QUANTITY):
-            bat_act = 1
-            if bat_act == 1:
-                friend_observation, friendly_battery_reward, done_ATTACKERS, info = \
-                    self.friendly_batteries[fr_bat_id].step(action['friends'], fr_bat_id,
-                                                            self.observation['friends_bat'])
+        # Launch missiles
+        # attackers
+        attackers_launch_id = np.argwhere(action['attackers']['missiles']['launch'])  # id of units with launch action
+        missiles_to_launch = get_missiles_to_launch(self.attackers_missiles, attackers_launch_id)
+        self.attackers_missiles[missiles_to_launch, 8] = True  # set missiles to launched
 
-        # en_bat_active = action['enemies']['batteries']
-        for en_bat_id in range(CONFIG.ENNEMY_BATTERY.NUM_OF_BATTERIES):
-            bat_act = 1
-            if bat_act == 1:
-                enemy_observation, enemy_battery_reward, done_enemy_battery, info = \
-                    self.enemy_batteries[en_bat_id].step(action['enemies'], en_bat_id, self.observation['enemy_bat'])
+        # defenders
+        defenders_launch_id = np.argwhere(action['defenders']['missiles']['launch'])  # id of units with launch action
+        missiles_to_launch = get_missiles_to_launch(self.defenders_missiles, defenders_launch_id)
+        self.defenders_missiles[missiles_to_launch, 8] = True  # set missiles to launched
 
-        for city_bat_id in range(CONFIG.ENNEMY_CITIES_BATTERY.NUM_OF_BATTERIES):
-            bat_act = 1
-            if bat_act == 1:
-                enemy_cities_observation, enemy_cities_reward, done_enemy_cities, info = \
-                    self.enemy_cities[city_bat_id].step(action['cities'], city_bat_id, self.observation['enemy_cities'])
-
-        # _, battery_reward, _, can_fire_dict = self.batteries.step(action)
-        # _, _, done_cities, _ = self.cities.step(action)
-        # _, _, done_enemy_missiles, _ = self.enemy_missiles.step(action)
-        # _, _, _, _ = self.friendly_missiles.step(action)
-        # _, _, _, _ = self.target.step(action)
-
-        print('enemy', self.observation['enemy_bat']['missiles']['health'])
-        print('friend', self.observation['friends_bat']['missiles']['health'])
-
+        # Roll movements
+        # attackers units
+        delta_attackers = get_movement(self.attackers[:3], self.attackers[:4], action['attackers']['movement'])
+        self.attackers[:, 1:5] += delta_attackers
+        # defenders units
+        delta_defenders = get_movement(self.defenders[:3], self.defenders[:4], action['defenders']['movement'])
+        self.defenders[:, 1:5] += delta_defenders
+        # attackers missiles - non launched
+        non_launched = np.argwhere(not self.attackers_missiles[:, 8])
+        non_launched_parents = self.attackers_missiles[non_launched, 1]
+        attackers_missiles_delta = delta_attackers[non_launched_parents]
+        self.attackers_missiles[non_launched, 1:4] += attackers_missiles_delta
+        # defenders missiles - non launched
+        # attackers missiles - launched
+        # defenders missiles - launched
         # Check for collisions
         # ------------------------------------------
 
-        # self._collisions_missiles()
+
+        self.collisions(self.observation)
         # self._collisions_cities()
+
+        # Calculate rewards
+        # ------------------------------------------
+        cities_reward = 0
 
         # Check if episode is finished
         # ------------------------------------------
@@ -649,9 +741,24 @@ class MissileCommandEnv(gym.Env, EnemyBattery, FriendlyBattery):
         # ------------------------------------------
 
         self.timestep += 1
-        self.reward_total += friendly_battery_reward + enemy_battery_reward + enemy_cities_reward + self.reward_timestep
+        self.reward_total += friendly_battery_reward + enemy_battery_reward + cities_reward + self.reward_timestep
         self.observation['sensors']['vision'] = self._process_observation()
         return self.observation, self.reward_timestep, done, {}
+
+    def get_entities_indexes(self, friends_missiless, observation):
+        live_non_launched_fr_missile = np.where(
+            np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 0) == True)
+        live_launched_fr_missile = np.where(
+            np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 1) == True)
+
+        live_enemy_cities = np.where(enenmy_cities['health'] == 1)
+        target_enemy_cities = np.where(
+            np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
+                           enenmy_cities['enemy_atc'] == True) == True)
+        non_target_enemy_cities = np.where(
+            np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
+                           enenmy_cities['enemy_atc'] == False) == True)
+        return live_non_launched_fr_missile, live_launched_fr_missile, target_enemy_cities, non_target_enemy_cities
 
     def render(self, mode="rgb_array"):
         """Render the environment.
