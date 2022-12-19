@@ -19,6 +19,7 @@ class CONFIG():
     FPS: int = 10  # 144
     HEIGHT: int = 1000
     WIDTH: int = 1000
+    SEED = 42
 
     @dataclass
     class DEFENDERS:
@@ -45,6 +46,9 @@ class CONFIG():
         DETECTION_RANGE = [100, 500]
         KILL_RANGE = 800
 
+        COLOR: tuple = (0, 0, 255)
+        SIZE = 10
+
         @dataclass
         class MISSILES:
             RADIUS: float = 10.0
@@ -56,6 +60,9 @@ class CONFIG():
             NB_ACTIONS: int = 9
             LAUNCH_THETA: float = 90
             DTHETA = np.arange(-10, 25, 5)
+
+            COLOR: tuple = (255, 255, 255)
+            SIZE = 2
 
     @dataclass
     class ATTACKERS:
@@ -81,6 +88,9 @@ class CONFIG():
         DETECTION_RANGE = [200.0, 2000.0]
         KILL_RANGE = 1000.0
 
+        COLOR: tuple = (255, 0, 0)
+        SIZE = 2
+
         @dataclass
         class MISSILES:
             RADIUS: float = 10.0
@@ -90,6 +100,9 @@ class CONFIG():
             SPEED: float = 20.0
             LAUNCH_THETA: float = 0
             DTHETA = np.arange(-10, 25, 5)
+
+            COLOR: tuple = (255, 255, 255)
+            SIZE = 2
 
     @dataclass
     class CITIES:
@@ -115,6 +128,8 @@ class CONFIG():
 
         DLaunch_Time: int = 5
 
+        COLOR: tuple = (0, 255, 0)
+        SIZE = 2
     #
     # class ENNEMY_CITIES():
     #     """Cities configuration.

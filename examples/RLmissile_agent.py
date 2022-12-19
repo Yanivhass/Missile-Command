@@ -7,7 +7,7 @@ from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
 
 from config import CONFIG
-from game.utility import  action_reset, sim_src_action # sim_enemies_action, sim_friends_action,
+# from game.utility import  action_reset, sim_src_action # sim_enemies_action, sim_friends_action,
 import __init__
 
 if __name__ == "__main__":
@@ -21,27 +21,27 @@ if __name__ == "__main__":
     recorded_frames = []
 
     action = env.action_space.sample()
-    action_reset(action)
+    # action_reset(action)
 
     # While the episode is not finished
     done = False
     step = 0
 
     while step < 50:
-
+        action = env.action_space.sample()
         # Select an action (here, a random one)
-        random_action = False
-        if random_action:
-            action = env.action_space.sample()
-        else:
-            ######## manual compute of friends and enemy actions ############
-            # done, info = sim_friends_action(observation, action, step)
-            # done, info = sim_enemies_action(observation, action, step)
-            fr_to_en_cities_indices, done, info =  sim_src_action(observation['friends_bat'], observation['enemy_cities'], action['friends'],
-                                                                  step%CONFIG.FRIENDLY_BATTERY.DLaunch_Time, np.array(CONFIG.FRIENDLY_BATTERY.DETECTION_RANGE))
-            en_to_fr_missiles_indices, done, info = sim_src_action(observation['enemy_bat'], observation['friends_bat'], action['enemies'],
-                                                                   step%CONFIG.ENNEMY_BATTERY.DLaunch_Time,
-                                                                   np.array(CONFIG.ENNEMY_BATTERY.DETECTION_RANGE), third_bats = observation['enemy_cities'])
+        # random_action = True
+        # if random_action:
+        #     action = env.action_space.sample()
+        # else:
+        #     ######## manual compute of friends and enemy actions ############
+        #     # done, info = sim_friends_action(observation, action, step)
+        #     # done, info = sim_enemies_action(observation, action, step)
+        #     # fr_to_en_cities_indices, done, info =  sim_src_action(observation['friends_bat'], observation['enemy_cities'], action['friends'],
+            #                                                       step%CONFIG.FRIENDLY_BATTERY.DLaunch_Time, np.array(CONFIG.FRIENDLY_BATTERY.DETECTION_RANGE))
+            # en_to_fr_missiles_indices, done, info = sim_src_action(observation['enemy_bat'], observation['friends_bat'], action['enemies'],
+            #                                                        step%CONFIG.ENNEMY_BATTERY.DLaunch_Time,
+            #                                                        np.array(CONFIG.ENNEMY_BATTERY.DETECTION_RANGE), third_bats = observation['enemy_cities'])
             #################################################################
 
         # One step forward

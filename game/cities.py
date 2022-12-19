@@ -19,7 +19,7 @@ class EnemyCities():
     """
     MAX_HEALTH = 1.0
 
-    def __init__(self, number, pose = (0, CONFIG.WIDTH//2), launch = 1, health = CONFIG.ENNEMY_CITIES.MAX_HEALTH):
+    def __init__(self, number, pose):
         """Initialize cities.
 
         # Attributes:
