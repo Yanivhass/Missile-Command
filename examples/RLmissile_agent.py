@@ -27,7 +27,7 @@ if __name__ == "__main__":
     done = False
     step = 0
 
-    while step < 50:
+    while step < 500:
         action = env.action_space.sample()
         # Select an action (here, a random one)
         # random_action = True

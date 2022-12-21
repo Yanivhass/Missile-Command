@@ -15,5 +15,5 @@
   "defender missiles" : "columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id]",
   "attackers": "columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles]",
   "attackers missiles": "# columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id]",
-  "cities": "columns are [id, x, y, health]"
+  "cities": "columns are [0-id, 1-x, 2-y, 3-health]"
 }

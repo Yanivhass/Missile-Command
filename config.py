@@ -29,7 +29,7 @@ class CONFIG():
             RADIUS (float): radius of the anti-missile battery object.
         """
         QUANTITY: int = 3  # number of entities
-        RADIUS: float = 20.0
+        RADIUS: int = 20
         RANGE: float = 200
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 2
@@ -51,7 +51,7 @@ class CONFIG():
 
         @dataclass
         class MISSILES:
-            RADIUS: float = 10.0
+            RADIUS: int = 10
             EXPLOSION_RADIUS: float = 30
             PROBA_IN: float = 0.005
             SPEED: float = 40.0
@@ -72,7 +72,7 @@ class CONFIG():
             RADIUS (float): radius of the anti-missile battery object.
         """
         QUANTITY: int = 3
-        RADIUS: float = 20.0
+        RADIUS: int = 20
         RANGE: float = 466.0
         MAX_HEALTH: float = 1
         MISSILES_PER_UNIT = 10
@@ -93,7 +93,7 @@ class CONFIG():
 
         @dataclass
         class MISSILES:
-            RADIUS: float = 10.0
+            RADIUS: int = 10
             EXPLOSION_RADIUS: float = 50
             PROBA_IN: float = 0.005
             MAX_HEALTH = 1
@@ -114,7 +114,7 @@ class CONFIG():
         """
 
         QUANTITY: int = 1
-        RADIUS: float = 5.0
+        RADIUS: int = 30
         # RANGE: float = 466.0
         MAX_HEALTH: float = 1
 
