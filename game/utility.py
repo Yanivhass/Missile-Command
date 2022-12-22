@@ -13,10 +13,10 @@ def compute_bat_missiles_ind(ind, div):
 
 def action_reset(action):
 
-    action['cities']['missiles']['actions'][:] = 0
-    action['cities']['missiles']['launch'][:] = 1
-    action['cities']['missiles']['enemy_tar'][:] = False
-    action['cities']['missiles']['enemy_atc'][:] = False
+    # action['cities']['missiles']['actions'][:] = 0
+    # action['cities']['missiles']['launch'][:] = 1
+    # action['cities']['missiles']['enemy_tar'][:] = False
+    # action['cities']['missiles']['enemy_atc'][:] = False
 
     action['enemies']['missiles']['actions'][:] = 0
     action['enemies']['missiles']['launch'][:] = 0

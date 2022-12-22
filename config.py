@@ -17,9 +17,12 @@ class CONFIG():
     """
     DTYPE: np.dtype = np.float32
     FPS: int = 10  # 144
-    HEIGHT: int = 1000
-    WIDTH: int = 1000
+    HEIGHT: int = 800
+    WIDTH: int = 1200
+    SCREEN_HEIGHT: int = 1000
+    SCREEN_WIDTH: int = 1000
     SEED = 42
+    SPEED_MODIFIER = 0.1
 
     @dataclass
     class DEFENDERS:
@@ -28,14 +31,14 @@ class CONFIG():
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 3  # number of entities
+        QUANTITY: int = 2  # number of entities
         RADIUS: int = 20
         RANGE: float = 200
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 2
 
-        INIT_HEIGHT_RANGE = [0.1, 0.2]
-        INIT_POS_RANGE = [0.3, 1]
+        INIT_HEIGHT_RANGE = [0.1, 0.9]
+        INIT_POS_RANGE = [0.7, 0.9]
         SPEED: float = 0.0
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 90
@@ -71,7 +74,7 @@ class CONFIG():
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 3
+        QUANTITY: int = 2
         RADIUS: int = 20
         RANGE: float = 466.0
         MAX_HEALTH: float = 1
@@ -113,13 +116,13 @@ class CONFIG():
             RADIUS (float): radius of a city object.
         """
 
-        QUANTITY: int = 1
+        QUANTITY: int = 2
         RADIUS: int = 30
         # RANGE: float = 466.0
         MAX_HEALTH: float = 1
 
-        INIT_HEIGHT_RANGE = [0, 0.1]
-        INIT_POS_RANGE = [0.75, 0.75]
+        INIT_HEIGHT_RANGE = [0.5, 0.9]
+        INIT_POS_RANGE = [0.7, 0.8]
         SPEED: float = 0.0
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 0
