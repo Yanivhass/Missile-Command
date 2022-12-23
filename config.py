@@ -15,14 +15,14 @@ class CONFIG():
         HEIGHT (int): environment height.
         WIDTH (int): environment width.
     """
-    DTYPE: np.dtype = np.float32
+    IMAGE_DTYPE: np.dtype = np.uint8
     FPS: int = 10  # 144
-    HEIGHT: int = 800
-    WIDTH: int = 1200
+    HEIGHT: int = 2000
+    WIDTH: int = 2000
     SCREEN_HEIGHT: int = 1000
     SCREEN_WIDTH: int = 1000
     SEED = 42
-    SPEED_MODIFIER = 0.1
+    SPEED_MODIFIER = 0.9
 
     @dataclass
     class DEFENDERS:
@@ -37,8 +37,8 @@ class CONFIG():
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 2
 
-        INIT_HEIGHT_RANGE = [0.1, 0.9]
-        INIT_POS_RANGE = [0.7, 0.9]
+        INIT_HEIGHT_RANGE = [0.5, 0.6]
+        INIT_POS_RANGE = [0.5, 0.6]
         SPEED: float = 0.0
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 90
@@ -50,7 +50,7 @@ class CONFIG():
         KILL_RANGE = 800
 
         COLOR: tuple = (0, 0, 255)
-        SIZE = 10
+        SIZE: int = 10
 
         @dataclass
         class MISSILES:
@@ -65,7 +65,7 @@ class CONFIG():
             DTHETA = np.arange(-10, 25, 5)
 
             COLOR: tuple = (255, 255, 255)
-            SIZE = 2
+            SIZE: int = 10
 
     @dataclass
     class ATTACKERS:
@@ -92,7 +92,7 @@ class CONFIG():
         KILL_RANGE = 1000.0
 
         COLOR: tuple = (255, 0, 0)
-        SIZE = 2
+        SIZE: int = 10
 
         @dataclass
         class MISSILES:
@@ -105,7 +105,7 @@ class CONFIG():
             DTHETA = np.arange(-10, 25, 5)
 
             COLOR: tuple = (255, 255, 255)
-            SIZE = 2
+            SIZE: int = 10
 
     @dataclass
     class CITIES:
@@ -132,7 +132,7 @@ class CONFIG():
         DLaunch_Time: int = 5
 
         COLOR: tuple = (0, 255, 0)
-        SIZE = 2
+        SIZE: int = 10
     #
     # class ENNEMY_CITIES():
     #     """Cities configuration.
@@ -264,10 +264,11 @@ class CONFIG():
             ENEMEY_MISSILE_LAUNCHED (float); reward for each ennemy missile launched.
             ENNEMY_TARGET_MISSED (float); reward for each friendly missile target miss.
         """
-        DESTROYED_CITY: float = +10.0
-        DESTROYED_BATTERY: float = +50.0
-        DESTROYED_MISSILES: float = +5.0
-        ENEMY_MISSILE_LAUNCHED: float = -10.0
+        DESTROYED_CITY: float = +1000.0
+        DESTROYED_AA_BATTERY: float = +50.0
+        DESTROYED_BOMBER: float = -200.0
+        # DESTROYED_MISSILES: float = + 15.0
+        MISSILE_LAUNCHED: float = -10.0
         DESTROYED_FRIENDLY_BATTERY: float = -50.0
         DESTROYED_FRIENDLY_MISSILES: float = -10.0
         FRIENDLY_MISSILE_LAUNCHED: float = +5.0

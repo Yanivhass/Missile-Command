@@ -1,14 +1,18 @@
 """Environment usage for a machine."""
 
 import gym
-from PIL import Image
+import math
+import random
 import numpy as np
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+import matplotlib
+import matplotlib.pyplot as plt
+from collections import namedtuple, deque
+from itertools import count
 
-
-from config import CONFIG
-# from game.utility import  action_reset, sim_src_action # sim_enemies_action, sim_friends_action,
-import __init__
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
 
 if __name__ == "__main__":
 
