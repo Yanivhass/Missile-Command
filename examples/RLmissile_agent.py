@@ -1,6 +1,7 @@
 """Environment usage for a machine."""
 
 import gym
+
 from PIL import Image
 import numpy as np
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
@@ -48,15 +49,15 @@ if __name__ == "__main__":
         observation, reward, done, _ = env.step(action)
 
         # Render (or not) the environment
-        env.render(mode="rgb_array")  # "processed_observation"/"rgb_array"
-
-        # frame = np.array(Image.fromarray(observation['sensors']['vision'].astype('uint8')).rotate(180))
-        # recorded_frames.append(frame)
+        frame = env.render(mode="rgb_array")  # "processed_observation"/"rgb_array"
+        if frame is not None:
+            frame = np.array(Image.fromarray(frame.astype('uint8')))  # .rotate(180)
+            recorded_frames.append(frame)
 
         step += 1
 
-    # clip = ImageSequenceClip(recorded_frames, fps=10)
-    # clip.write_videofile('capt.mp4')
+    clip = ImageSequenceClip(recorded_frames, fps=10)
+    clip.write_videofile('capt.mp4')
 
         # # Select an action (here, a random one)
         # en_action = []

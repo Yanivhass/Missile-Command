@@ -1,78 +1,99 @@
 """Environment usage for a machine."""
 
 import gym
-import math
+from gym.spaces.utils import flatten_space as flatten
 import random
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-from collections import namedtuple, deque
-from itertools import count
-
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
+import torch.optim as optim
+import matplotlib.pyplot as plt
+import base64, io
+
+import numpy as np
+from collections import deque, namedtuple
+
+# For visualization
+from gym.wrappers.monitoring import video_recorder
+# from IPython.display import HTML
+# from IPython import display
+# import glob
+
+
+
+from QNetwork import Agent, dqn
+
+# def show_video(env_name):
+#     mp4list = glob.glob('video/*.mp4')
+#     if len(mp4list) > 0:
+#         mp4 = 'video/{}.mp4'.format(env_name)
+#         video = io.open(mp4, 'r+b').read()
+#         encoded = base64.b64encode(video)
+#         display.display(HTML(data=''''''.format(encoded.decode('ascii'))))
+#     else:
+#         print("Could not find video")
+
+
+def show_video_of_model(agent, env_name):
+    env = gym.make(env_name)
+    # vid = video_recorder.VideoRecorder(env, path="video/{}.mp4".format(env_name))
+    recorded_frames = []
+    agent.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
+    state = env.reset()
+    done = False
+    while not done:
+        frame = env.render(mode='rgb_array')
+        # vid.capture_frame()
+        # frame = np.array(Image.fromarray(observation['sensors']['vision'].astype('uint8')).rotate(180))
+        recorded_frames.append(frame)
+
+        action = agent.act(state)
+
+        state, reward, done, _ = env.step(action)
+
+
+    env.close()
+
 
 if __name__ == "__main__":
-
+    print(torch.cuda.is_available())
+    # print(torch.device())
     # Create the environment
     env = gym.make("gym_missile_command:missile-command-v0")
-
+    env.seed(0)
+    print('State shape: ', flatten(env.observation_space).shape)
+    print('Number of actions: ', flatten(env.action_space).shape)
     # Reset it
     observation = env.reset()
 
     recorded_frames = []
 
-    action = env.action_space.sample()
-    # action_reset(action)
+    BUFFER_SIZE = int(1e5)  # replay buffer size
+    BATCH_SIZE = 64  # minibatch size
+    GAMMA = 0.99  # discount factor
+    TAU = 1e-3  # for soft update of target parameters
+    LR = 5e-4  # learning rate
+    UPDATE_EVERY = 4  # how often to update the network
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    state_size = flatten(env.observation_space).shape[0]
+    action_size = flatten(env.action_space).shape[0]
 
     # While the episode is not finished
     done = False
     step = 0
 
-    while step < 500 and not done:
-        action = env.action_space.sample()
-        # Select an action (here, a random one)
-        # random_action = True
-        # if random_action:
-        #     action = env.action_space.sample()
-        # else:
-        #     ######## manual compute of friends and enemy actions ############
-        #     # done, info = sim_friends_action(observation, action, step)
-        #     # done, info = sim_enemies_action(observation, action, step)
-        #     # fr_to_en_cities_indices, done, info =  sim_src_action(observation['friends_bat'], observation['enemy_cities'], action['friends'],
-            #                                                       step%CONFIG.FRIENDLY_BATTERY.DLaunch_Time, np.array(CONFIG.FRIENDLY_BATTERY.DETECTION_RANGE))
-            # en_to_fr_missiles_indices, done, info = sim_src_action(observation['enemy_bat'], observation['friends_bat'], action['enemies'],
-            #                                                        step%CONFIG.ENNEMY_BATTERY.DLaunch_Time,
-            #                                                        np.array(CONFIG.ENNEMY_BATTERY.DETECTION_RANGE), third_bats = observation['enemy_cities'])
-            #################################################################
+    # agent = Agent(state_size=8, action_size=4, seed=0)
+    scores = dqn(env=env,state_size=state_size, action_size=action_size)
 
-        # One step forward
-        observation, reward, done, _ = env.step(action)
+    # plot the scores
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(np.arange(len(scores)), scores)
+    plt.ylabel('Score')
+    plt.xlabel('Episode #')
+    plt.show()
 
-        # Render (or not) the environment
-        env.render(mode="rgb_array")  # "processed_observation"/"rgb_array"
+    agent = Agent(state_size=state_size, action_size=action_size, seed=0)
+    show_video_of_model(agent, 'LunarLander-v2')
+    # show_video('LunarLander-v2')
 
-        # frame = np.array(Image.fromarray(observation['sensors']['vision'].astype('uint8')).rotate(180))
-        # recorded_frames.append(frame)
-
-        step += 1
-
-    # clip = ImageSequenceClip(recorded_frames, fps=10)
-    # clip.write_videofile('capt.mp4')
-
-        # # Select an action (here, a random one)
-        # en_action = []
-        # for ind in range(CONFIG.ENNEMY_BATTERY.NUMBER):
-        #     en_action.append(env.action_space['enemies'][ind].sample())
-        # fr_action = []
-        # for ind in range(CONFIG.FRIENDLY_BATTERY.NUMBER):
-        #     fr_action.append(env.action_space['friends'][ind].sample())
-        # action =  {'friends': fr_action, 'enemies': en_action}
-        #
-        # # One step forward
-        # observation, reward, done, _ = env.step(action)
-        #
-        # # Render (or not) the environment
-        # env.render(mode="rgb_array") # "processed_observation"/"rgb_array"

@@ -6,6 +6,7 @@ import numpy as np
 import gym
 from gym import spaces
 from gym.utils import seeding
+from gym.spaces.utils import flatten_space as flatten
 from PIL import Image
 
 from config import CONFIG
@@ -169,7 +170,7 @@ class MissileCommandEnv(gym.Env):
         num_of_targets = attackers_count + attackers_missile_count
         defender_targets = np.ones((1, defenders_missile_count)) * num_of_targets
         # defender_targets[:, 1] = num_of_targets
-        self.action_space = spaces.Dict(
+        self.action_dictinary = spaces.Dict(
             # Actions, currently only for attackers
             {'attackers': spaces.Dict(
                 {
@@ -207,12 +208,12 @@ class MissileCommandEnv(gym.Env):
                         )})
             }
         )
-
+        self.action_space = flatten(self.action_dictinary)
         # pose_boxmin = pose_boxmax = np.zeros((1, 4))
         pose_boxmin = np.array([0, 0, 0, 0])
         pose_boxmax = np.array([CONFIG.WIDTH, CONFIG.HEIGHT, 100, 360])
 
-        self.observation_space = \
+        self.observation_dictionary = \
             spaces.Dict(
                 {
                     # state-space for the defending team batteries
@@ -299,14 +300,14 @@ class MissileCommandEnv(gym.Env):
                                 shape=(attackers_missile_count, 1)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(attackers_missile_count),
-                        }),
-                    }),
-                    'sensors': spaces.Dict({
-                        'vision': spaces.Box(0, 255, shape=(CONFIG.WIDTH, CONFIG.HEIGHT))
+                        })
                     })
-                })
 
-        self.observation = self.observation_space.sample()
+                })
+        # self.map = spaces.Box(0, 255, shape=(CONFIG.WIDTH, CONFIG.HEIGHT))
+        self.observation_space = flatten(self.observation_dictionary)
+        self.observation = self.observation_dictionary.sample()
+        self.observation_vec = flatten(self.observation)
         # Set the seed for reproducibility
         self.seed(CONFIG.SEED)
         # Initialize the state
@@ -382,38 +383,39 @@ class MissileCommandEnv(gym.Env):
                 resized (or not) observation.
         """
         processed_observation = cv2.resize(
-            self.observation['sensors']['vision'],
+            self.map,
             (CONFIG.SCREEN_WIDTH, CONFIG.SCREEN_HEIGHT),
             interpolation=cv2.INTER_AREA,
         )
         return processed_observation.astype(CONFIG.IMAGE_DTYPE)
 
     def _extract_observation(self):
-        self.observation['attackers']['pose'] = self.attackers[:, 1:3]
-        self.observation['attackers']['velocity'] = self.attackers[:, 3]
-        self.observation['attackers']['direction'] = self.attackers[:, 4]
-        self.observation['attackers']['health'] = self.attackers[:, 5]
-        self.observation['attackers']['missiles']['pose'] = self.attackers_missiles[:, 1:3]
-        self.observation['attackers']['missiles']['velocity'] = self.attackers_missiles[:, 3]
-        self.observation['attackers']['missiles']['direction'] = self.attackers_missiles[:, 4]
-        self.observation['attackers']['missiles']['health'] = self.attackers_missiles[:, 5]
-        self.observation['attackers']['missiles']['target'] = self.attackers_missiles[:, 6]
-        self.observation['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7]
+        obs = self.observation_dictionary.sample()
+        self.observation_dictionary['attackers']['pose'] = self.attackers[:, 1:3]
+        self.observation_dictionary['attackers']['velocity'] = self.attackers[:, 3]
+        self.observation_dictionary['attackers']['direction'] = self.attackers[:, 4]
+        self.observation_dictionary['attackers']['health'] = self.attackers[:, 5]
+        self.observation_dictionary['attackers']['missiles']['pose'] = self.attackers_missiles[:, 1:3]
+        self.observation_dictionary['attackers']['missiles']['velocity'] = self.attackers_missiles[:, 3]
+        self.observation_dictionary['attackers']['missiles']['direction'] = self.attackers_missiles[:, 4]
+        self.observation_dictionary['attackers']['missiles']['health'] = self.attackers_missiles[:, 5]
+        self.observation_dictionary['attackers']['missiles']['target'] = self.attackers_missiles[:, 6]
+        self.observation_dictionary['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7]
 
-        self.observation['defenders']['pose'] = self.defenders[:, 1:3]
-        self.observation['defenders']['velocity'] = self.defenders[:, 3]
-        self.observation['defenders']['direction'] = self.defenders[:, 4]
-        self.observation['defenders']['health'] = self.defenders[:, 5]
-        self.observation['defenders']['missiles']['pose'] = self.defenders_missiles[:, 1:3]
-        self.observation['defenders']['missiles']['velocity'] = self.defenders_missiles[:, 3]
-        self.observation['defenders']['missiles']['direction'] = self.defenders_missiles[:, 4]
-        self.observation['defenders']['missiles']['health'] = self.defenders_missiles[:, 5]
-        self.observation['defenders']['missiles']['target'] = self.defenders_missiles[:, 6]
-        self.observation['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7]
+        self.observation_dictionary['defenders']['pose'] = self.defenders[:, 1:3]
+        self.observation_dictionary['defenders']['velocity'] = self.defenders[:, 3]
+        self.observation_dictionary['defenders']['direction'] = self.defenders[:, 4]
+        self.observation_dictionary['defenders']['health'] = self.defenders[:, 5]
+        self.observation_dictionary['defenders']['missiles']['pose'] = self.defenders_missiles[:, 1:3]
+        self.observation_dictionary['defenders']['missiles']['velocity'] = self.defenders_missiles[:, 3]
+        self.observation_dictionary['defenders']['missiles']['direction'] = self.defenders_missiles[:, 4]
+        self.observation_dictionary['defenders']['missiles']['health'] = self.defenders_missiles[:, 5]
+        self.observation_dictionary['defenders']['missiles']['target'] = self.defenders_missiles[:, 6]
+        self.observation_dictionary['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7]
 
-        self.observation['cities']['pose'] = self.cities[:, 1:3]
-        self.observation['cities']['health'] = self.cities[:, 3]
-
+        self.observation_dictionary['cities']['pose'] = self.cities[:, 1:3]
+        self.observation_dictionary['cities']['health'] = self.cities[:, 3]
+        self.observation = flatten(self.observation_dictionary)
         return self.observation
 
     def reset(self):
@@ -601,7 +603,7 @@ class MissileCommandEnv(gym.Env):
         oob = out_of_bounds(self.attackers[:, 1:3])
         if np.any(oob):
             # self.attackers[oob, 1:3] -= delta_pose[oob]
-            self.destroy_units_by_id(side="attackers", unit_ids=oob)
+            self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oob, 0])
 
         # defenders units
         [delta_pose, velocity, angles] = get_movement(self.defenders[:, 3], self.defenders[:, 4],
@@ -613,7 +615,7 @@ class MissileCommandEnv(gym.Env):
         oob = out_of_bounds(self.defenders[:, 1:3])
         if np.any(oob):
             # self.defenders[oob, 1:3] -= delta_pose[oob]
-            self.destroy_units_by_id(side="defenders", unit_ids=oob)
+            self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[oob, 0])
 
         # attackers missiles - non launched
         attackers_non_launched = np.argwhere(np.logical_not(self.attackers_missiles[:, 7]))
@@ -651,14 +653,15 @@ class MissileCommandEnv(gym.Env):
             oob = out_of_bounds(self.defenders_missiles[:, 1:3])
             if np.any(oob):
                 # self.defenders_missiles[oob, 1:3] -= delta[oob,:].reshape(self.defenders_missiles[oob, 1:3].shape)
-                self.defenders_missiles[oob, [3, 5]] = 0  # velocity,health = 0
+                self.defenders_missiles[oob, 3] = 0  # velocity,health = 0
+                self.defenders_missiles[oob, 5] = 0
 
-        # Check for collisions
+                # Check for collisions
         # ------------------------------------------
         att_exp_rad = CONFIG.ATTACKERS.MISSILES.EXPLOSION_RADIUS
         def_exp_rad = CONFIG.DEFENDERS.MISSILES.EXPLOSION_RADIUS
-        defenders_launched = np.argwhere((self.defenders_missiles[:, 7] == 1))
-        attackers_launched = np.argwhere((self.attackers_missiles[:, 7] == 1))
+        defenders_launched = np.argwhere((self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0))
+        attackers_launched = np.argwhere((self.attackers_missiles[:, 7] == 1) & (self.attackers_missiles[:, 5] > 0))
         reward_battery_destroyed = 0
         reward_city_destroyed = 0
         reward_bomber_destroyed = 0
@@ -682,7 +685,7 @@ class MissileCommandEnv(gym.Env):
         # get range from launched attacker missiles to defender units and cities
         if np.any(attackers_launched):
             target_id = self.attackers_missiles[attackers_launched, 6].astype(int)
-            targets_xy = all_defenders[target_id, 1:2]
+            targets_xy = all_defenders[target_id, 1:3]
             hits = np.linalg.norm(targets_xy - self.attackers_missiles[attackers_launched, 1:3], axis=-1) <= att_exp_rad
             if np.any(hits):
                 attackers_hit = attackers_launched[hits]
@@ -713,8 +716,8 @@ class MissileCommandEnv(gym.Env):
         # Render every objects
         # ------------------------------------------
 
-        self.observation['sensors']['vision'] = \
-            self._compute_sensor_observation('vision')
+        # self.map = \
+        #     self._compute_sensor_observation('vision')
 
         # Return everything
         # ------------------------------------------
@@ -723,6 +726,7 @@ class MissileCommandEnv(gym.Env):
         # self.reward_total += friendly_battery_reward + enemy_battery_reward + cities_reward + self.reward_timestep
         self.reward_timestep = reward_battery_destroyed + reward_bomber_destroyed + reward_city_destroyed
         self.reward_total += self.reward_timestep
+        self.observation = self._extract_observation()
         return self.observation, self.reward_timestep, done, {}
 
     # def get_entities_indexes(self, friends_missiless, observation):
@@ -750,6 +754,7 @@ class MissileCommandEnv(gym.Env):
             mode (str): the render mode. Possible values are "rgb_array" and
                 "processed_observation".
         """
+        frame = None
         if not self.display:
             pygame.init()
             # pygame.mouse.set_visible(False)
@@ -758,14 +763,14 @@ class MissileCommandEnv(gym.Env):
 
         # Display the normal observation
         if mode == "rgb_array":
+            self.map = \
+                self._compute_sensor_observation('vision')
             self.display = pygame.display.set_mode(
                 (CONFIG.SCREEN_WIDTH, CONFIG.SCREEN_HEIGHT))
-            obs = self.observation['sensors'][
-                'vision']  # np.array(Image.fromarray(self.observation['sensors']['vision']))
-            obs = cv2.resize(obs, (CONFIG.SCREEN_WIDTH, CONFIG.SCREEN_HEIGHT),
+            frame = cv2.resize(self.map, (CONFIG.SCREEN_WIDTH, CONFIG.SCREEN_HEIGHT),
                              interpolation=cv2.INTER_AREA,
                              )
-            surface = pygame.surfarray.make_surface(obs)
+            surface = pygame.surfarray.make_surface(frame)
             surface = pygame.transform.rotate(surface, 90)
 
         # Display the processed observation
@@ -787,7 +792,7 @@ class MissileCommandEnv(gym.Env):
 
         # Limix max FPS
         self.clock.tick(CONFIG.FPS)
-        return self.observation
+        return frame
 
     def close(self):
         """Close the environment."""
@@ -795,14 +800,17 @@ class MissileCommandEnv(gym.Env):
             pygame.quit()
 
     def destroy_units_by_id(self, side, unit_ids):
+        # destroy unit and unlaunched missiles
         if side == "attackers":
-            self.attackers[unit_ids, [3, 5]] = 0  # velocity, health = 0
-            missile_ids = np.isin(self.attackers_missiles[:, 8], unit_ids)
+            self.attackers[unit_ids.astype(int), [3, 5]] = 0  # velocity, health = 0
+            missiles_launched = self.attackers_missiles[:, 7] == 1
+            missile_ids = np.isin(self.attackers_missiles[missiles_launched, 8], unit_ids)
             self.attackers_missiles[missile_ids, 3] = 0  # velocity = 0
             self.attackers_missiles[missile_ids, 5] = 0  # health = 0
         if side == "defenders":
-            self.defenders[unit_ids, [3, 5]] = 0  # velocity, health = 0
-            missile_ids = np.isin(self.defenders_missiles[:, 8], unit_ids)
+            self.defenders[unit_ids.astype(int), [3, 5]] = 0  # velocity, health = 0
+            missiles_launched = self.defenders_missiles[:, 7] == 1
+            missile_ids = np.isin(self.defenders_missiles[missiles_launched, 8], unit_ids)
             self.defenders_missiles[missile_ids, 3] = 0  # velocity = 0
             self.defenders_missiles[missile_ids, 5] = 0  # health = 0
 
