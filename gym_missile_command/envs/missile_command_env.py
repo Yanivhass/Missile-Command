@@ -178,7 +178,7 @@ class MissileCommandEnv(gym.Env):
                     # movement [0 = left, 1 = straight, 2 = right]
                     'movement': spaces.MultiDiscrete([3] * attackers_count),
                     # Actions for the missiles:
-                    'missiles': spaces.Dict(
+                    ''''missiles': spaces.Dict(
                         {
                             # 'launch: 0 - None, 1 - launch,
                             'launch': spaces.MultiBinary(attackers_missile_count),
@@ -187,6 +187,8 @@ class MissileCommandEnv(gym.Env):
                                 np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
                             # which enemy is being attacked
                         }
+                    )'''
+                    'target': spaces.MultiDiscrete([defenders_count+cities_count] * attackers_count()
                     )
                 }),
                 'defenders': spaces.Dict(
@@ -547,15 +549,30 @@ class MissileCommandEnv(gym.Env):
         defenders_range = CONFIG.DEFENDERS.RANGE
 
         # attackers
-        missiles_to_launch = np.argwhere(action['attackers']['missiles']['launch'])  # missiles with launch action
+        missiles_to_launch = np.argwhere(action['attackers']['launch'])
+        # attackers with launch, and the id target
         unlaunched = self.attackers_missiles[missiles_to_launch, 7] == 0
-        missiles_to_launch = missiles_to_launch[unlaunched]
+        # missiles_to_launch = missiles_to_launch[unlaunched]
+
+        '''
+        for all attackers, check if chose to launch
+            if launching, pick first available missile
+                set it's target and launch
+        '''
+        # launch attacker missiles
+        a = self.attackers_missiles[unlaunched, :]
+        b, indices = np.unique(self.attackers_missiles[a, 8], return_index=True)
+        # b - attackers that need to launch
+        # indices - missiles that we can launch
+        self.attackers_missiles[6, :] = b
+        # change target id-s to the missiles requested by the action
+
         # check parent is alive
         parent = self.attackers_missiles[missiles_to_launch, 8].astype(int)
         parent = self.attackers[parent, 5] > 0
         missiles_to_launch = missiles_to_launch[parent]
         # confirm target is within range
-        target_id = action['attackers']['missiles']['target'][0][missiles_to_launch]
+        target_id = b
         in_range = \
             np.linalg.norm(all_defenders[target_id, 1:2] - self.attackers_missiles[missiles_to_launch, 1:2],
                            axis=-1) <= attackers_range
@@ -578,7 +595,7 @@ class MissileCommandEnv(gym.Env):
         parent = self.defenders[parent, 5] > 0
         missiles_to_launch = missiles_to_launch[parent]
         #  confirm target is within range
-        target_id = action['attackers']['missiles']['target'][0][missiles_to_launch]
+        target_id = b
         in_range = \
             np.linalg.norm(all_attackers[target_id, 1:2] - self.defenders_missiles[missiles_to_launch, 1:2],
                            axis=-1) <= defenders_range
