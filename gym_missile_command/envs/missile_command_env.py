@@ -6,7 +6,7 @@ import numpy as np
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.spaces.utils import flatten_space as flatten
+from gym.spaces.utils import flatten_space, flatten
 from PIL import Image
 
 from config import CONFIG
@@ -170,26 +170,27 @@ class MissileCommandEnv(gym.Env):
         num_of_targets = attackers_count + attackers_missile_count
         defender_targets = np.ones((1, defenders_missile_count)) * num_of_targets
         # defender_targets[:, 1] = num_of_targets
-        self.action_dictinary = spaces.Dict(
+        self.action_dictionary = spaces.Dict(
             # Actions, currently only for attackers
             {'attackers': spaces.Dict(
                 {
                     # 'batteries': spaces.MultiBinary(CONFIG.ATTACKERS.QUANTITY),
                     # movement [0 = left, 1 = straight, 2 = right]
                     'movement': spaces.MultiDiscrete([3] * attackers_count),
+                    'target': spaces.MultiDiscrete([defenders_count + cities_count] * attackers_count),
+                    'fire': spaces.MultiBinary([attackers_count])
                     # Actions for the missiles:
-                    ''''missiles': spaces.Dict(
-                        {
-                            # 'launch: 0 - None, 1 - launch,
-                            'launch': spaces.MultiBinary(attackers_missile_count),
-                            # target ID each missile is currently aiming at (including unfired missiles)
-                            'target': spaces.MultiDiscrete(
-                                np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
-                            # which enemy is being attacked
-                        }
-                    )'''
-                    'target': spaces.MultiDiscrete([defenders_count+cities_count] * attackers_count()
-                    )
+                    # ''''missiles': spaces.Dict(
+                    #     {
+                    #         # 'launch: 0 - None, 1 - launch,
+                    #         'launch': spaces.MultiBinary(attackers_missile_count),
+                    #         # target ID each missile is currently aiming at (including unfired missiles)
+                    #         'target': spaces.MultiDiscrete(
+                    #             np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
+                    #         # which enemy is being attacked
+                    #     }
+                    # )'''
+
                 }),
                 'defenders': spaces.Dict(
                     {
@@ -210,7 +211,7 @@ class MissileCommandEnv(gym.Env):
                         )})
             }
         )
-        self.action_space = flatten(self.action_dictinary)
+        self.action_space = flatten_space(self.action_dictionary)
         # pose_boxmin = pose_boxmax = np.zeros((1, 4))
         pose_boxmin = np.array([0, 0, 0, 0])
         pose_boxmax = np.array([CONFIG.WIDTH, CONFIG.HEIGHT, 100, 360])
@@ -307,9 +308,10 @@ class MissileCommandEnv(gym.Env):
 
                 })
         # self.map = spaces.Box(0, 255, shape=(CONFIG.WIDTH, CONFIG.HEIGHT))
-        self.observation_space = flatten(self.observation_dictionary)
+        self.observation_space = flatten_space(self.observation_dictionary)
         self.observation = self.observation_dictionary.sample()
-        self.observation_vec = flatten(self.observation)
+        # self.observation_vec = flatten(self.observation)
+        self.observation_vec = flatten(self.observation_dictionary, self.observation)
         # Set the seed for reproducibility
         self.seed(CONFIG.SEED)
         # Initialize the state
@@ -393,31 +395,31 @@ class MissileCommandEnv(gym.Env):
 
     def _extract_observation(self):
         obs = self.observation_dictionary.sample()
-        self.observation_dictionary['attackers']['pose'] = self.attackers[:, 1:3]
-        self.observation_dictionary['attackers']['velocity'] = self.attackers[:, 3]
-        self.observation_dictionary['attackers']['direction'] = self.attackers[:, 4]
-        self.observation_dictionary['attackers']['health'] = self.attackers[:, 5]
-        self.observation_dictionary['attackers']['missiles']['pose'] = self.attackers_missiles[:, 1:3]
-        self.observation_dictionary['attackers']['missiles']['velocity'] = self.attackers_missiles[:, 3]
-        self.observation_dictionary['attackers']['missiles']['direction'] = self.attackers_missiles[:, 4]
-        self.observation_dictionary['attackers']['missiles']['health'] = self.attackers_missiles[:, 5]
-        self.observation_dictionary['attackers']['missiles']['target'] = self.attackers_missiles[:, 6]
-        self.observation_dictionary['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7]
+        obs['attackers']['pose'] = self.attackers[:, 1:3]
+        obs['attackers']['velocity'] = self.attackers[:, 3]
+        obs['attackers']['direction'] = self.attackers[:, 4]
+        obs['attackers']['health'] = self.attackers[:, 5]
+        obs['attackers']['missiles']['pose'] = self.attackers_missiles[:, 1:3]
+        obs['attackers']['missiles']['velocity'] = self.attackers_missiles[:, 3]
+        obs['attackers']['missiles']['direction'] = self.attackers_missiles[:, 4]
+        obs['attackers']['missiles']['health'] = self.attackers_missiles[:, 5].astype(int)
+        obs['attackers']['missiles']['target'] = self.attackers_missiles[:, 6].astype(int)
+        obs['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7].astype(int)
 
-        self.observation_dictionary['defenders']['pose'] = self.defenders[:, 1:3]
-        self.observation_dictionary['defenders']['velocity'] = self.defenders[:, 3]
-        self.observation_dictionary['defenders']['direction'] = self.defenders[:, 4]
-        self.observation_dictionary['defenders']['health'] = self.defenders[:, 5]
-        self.observation_dictionary['defenders']['missiles']['pose'] = self.defenders_missiles[:, 1:3]
-        self.observation_dictionary['defenders']['missiles']['velocity'] = self.defenders_missiles[:, 3]
-        self.observation_dictionary['defenders']['missiles']['direction'] = self.defenders_missiles[:, 4]
-        self.observation_dictionary['defenders']['missiles']['health'] = self.defenders_missiles[:, 5]
-        self.observation_dictionary['defenders']['missiles']['target'] = self.defenders_missiles[:, 6]
-        self.observation_dictionary['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7]
+        obs['defenders']['pose'] = self.defenders[:, 1:3]
+        obs['defenders']['velocity'] = self.defenders[:, 3]
+        obs['defenders']['direction'] = self.defenders[:, 4]
+        obs['defenders']['health'] = self.defenders[:, 5]
+        obs['defenders']['missiles']['pose'] = self.defenders_missiles[:, 1:3]
+        obs['defenders']['missiles']['velocity'] = self.defenders_missiles[:, 3]
+        obs['defenders']['missiles']['direction'] = self.defenders_missiles[:, 4]
+        obs['defenders']['missiles']['health'] = self.defenders_missiles[:, 5].astype(int)
+        obs['defenders']['missiles']['target'] = self.defenders_missiles[:, 6].astype(int)
+        obs['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7].astype(int)
 
-        self.observation_dictionary['cities']['pose'] = self.cities[:, 1:3]
-        self.observation_dictionary['cities']['health'] = self.cities[:, 3]
-        self.observation = flatten(self.observation_dictionary)
+        obs['cities']['pose'] = self.cities[:, 1:3]
+        obs['cities']['health'] = self.cities[:, 3]
+        self.observation = flatten(self.observation_dictionary, obs)
         return self.observation
 
     def reset(self):
@@ -549,30 +551,26 @@ class MissileCommandEnv(gym.Env):
         defenders_range = CONFIG.DEFENDERS.RANGE
 
         # attackers
-        missiles_to_launch = np.argwhere(action['attackers']['launch'])
-        # attackers with launch, and the id target
-        unlaunched = self.attackers_missiles[missiles_to_launch, 7] == 0
-        # missiles_to_launch = missiles_to_launch[unlaunched]
 
-        '''
-        for all attackers, check if chose to launch
-            if launching, pick first available missile
-                set it's target and launch
-        '''
         # launch attacker missiles
-        a = self.attackers_missiles[unlaunched, :]
-        b, indices = np.unique(self.attackers_missiles[a, 8], return_index=True)
-        # b - attackers that need to launch
-        # indices - missiles that we can launch
-        self.attackers_missiles[6, :] = b
-        # change target id-s to the missiles requested by the action
+        # chose one ready missile from each living attacker and
+        # launch for parent who chose to fire
+        attackers_firing = np.argwhere(action['attackers']['launch'])
+        alive = self.attackers[attackers_firing, 5] > 0
+        attackers_firing = attackers_firing[alive]  # live attackers that chose to fire
+        unlaunched = self.attackers_missiles[:, 7] == 0
+        unlaunched = self.attackers_missiles[unlaunched, :]
+        _, indices = np.unique(self.attackers_missiles[unlaunched, 8], return_index=True)
+        missiles_to_launch = self.attackers_missiles[indices, 0]
+        parents = self.attackers_missiles[missiles_to_launch, 8]
+        # missiles with living parents who chose to fire
+        missiles_to_launch = missiles_to_launch[np.isin(parents, attackers_firing)] # parents who chose to fire
+        parents = self.attackers_missiles[missiles_to_launch, 8]
+        target_id = action['attackers']['target']
+        target_id = target_id[parents]
+        self.attackers_missiles[missiles_to_launch, 6] = target_id
 
-        # check parent is alive
-        parent = self.attackers_missiles[missiles_to_launch, 8].astype(int)
-        parent = self.attackers[parent, 5] > 0
-        missiles_to_launch = missiles_to_launch[parent]
-        # confirm target is within range
-        target_id = b
+        # confirm target is within range and alive
         in_range = \
             np.linalg.norm(all_defenders[target_id, 1:2] - self.attackers_missiles[missiles_to_launch, 1:2],
                            axis=-1) <= attackers_range
@@ -587,15 +585,24 @@ class MissileCommandEnv(gym.Env):
             CONFIG.ATTACKERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
 
         # defenders
-        missiles_to_launch = np.argwhere(action['defenders']['missiles']['launch'])  # missiles with launch action
-        unlaunched = self.defenders_missiles[missiles_to_launch, 7] == 0
-        missiles_to_launch = missiles_to_launch[unlaunched]
-        # check parent is alive
-        parent = self.defenders_missiles[missiles_to_launch, 8].astype(int)
-        parent = self.defenders[parent, 5] > 0
-        missiles_to_launch = missiles_to_launch[parent]
-        #  confirm target is within range
-        target_id = b
+        # chose one ready missile from each living attacker and
+        # launch for parent who chose to fire
+        defenders_firing = np.argwhere(action['defenders']['launch'])
+        alive = self.defenders[defenders_firing, 5] > 0
+        defenders_firing = defenders_firing[alive]  # live defenders that chose to fire
+        unlaunched = self.defenders_missiles[:, 7] == 0
+        unlaunched = self.defenders_missiles[unlaunched, :]
+        _, indices = np.unique(self.defenders_missiles[unlaunched, 8], return_index=True)
+        missiles_to_launch = self.defenders_missiles[indices, 0]
+        parents = self.defenders_missiles[missiles_to_launch, 8]
+        # missiles with living parents who chose to fire
+        missiles_to_launch = missiles_to_launch[np.isin(parents, defenders_firing)]
+        parents = self.defenders_missiles[missiles_to_launch, 8]
+        target_id = action['defenders']['target']
+        target_id = target_id[parents]
+        self.defenders_missiles[missiles_to_launch, 6] = target_id
+
+        #  confirm target is within range and alive
         in_range = \
             np.linalg.norm(all_attackers[target_id, 1:2] - self.defenders_missiles[missiles_to_launch, 1:2],
                            axis=-1) <= defenders_range

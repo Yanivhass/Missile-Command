@@ -1,7 +1,7 @@
 """Environment usage for a machine."""
 
 import gym
-from gym.spaces.utils import flatten_space as flatten
+from gym.spaces.utils import flatten_space, flatten
 import random
 import torch
 import torch.nn as nn
@@ -75,8 +75,8 @@ if __name__ == "__main__":
     LR = 5e-4  # learning rate
     UPDATE_EVERY = 4  # how often to update the network
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    state_size = flatten(env.observation_space).shape[0]
-    action_size = flatten(env.action_space).shape[0]
+    state_size = flatten_space(env.observation_space).shape[0]
+    action_size = flatten_space(env.action_dictionary["attackers"]).shape[0]
 
     # While the episode is not finished
     done = False
