@@ -194,6 +194,18 @@ class ReplayBuffer:
         return len(self.memory)
 
 
+def action_id_to_dict(env, action_id):
+    # action should be in range [1,576]
+    action = env.action_space.sample()  # random action for defenders
+    action["attackers"]["target"] = np.array([action_id % 4])
+    action_id = int(action_id / 4)
+    action["attackers"]["movement"] = np.array([action_id % 3])
+    action_id = int(action_id / 3)
+    action["attackers"]["fire"] = np.array([action_id % 2])
+    action_id = int(action_id / 2)
+    # action = flatten(env.action_dictionary, action)
+    return action
+
 def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
     """Deep Q-Learning.
 
@@ -215,8 +227,11 @@ def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0
         state = env.reset()
         score = 0
         for t in range(max_t):
+            if i_episode % 100 == 0:
+                env.render()
             action = agent.act(state, eps)
-            next_state, reward, done, _ = env.step(action)
+            action_dict = action_id_to_dict(env, action)
+            next_state, reward, done, _ = env.step(action_dict)
             agent.step(state, action, reward, next_state, done)
             state = next_state
             score += reward
@@ -228,9 +243,10 @@ def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)), end="")
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
-        if np.mean(scores_window) >= 200.0:
+        if np.mean(scores_window) >= 20000.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode - 100,
                                                                                          np.mean(scores_window)))
             torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
             break
+    torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
     return scores

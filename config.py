@@ -74,7 +74,7 @@ class CONFIG():
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 2
+        QUANTITY: int = 1
         RADIUS: int = 20
         RANGE: float = 466.0
         MAX_HEALTH: float = 1
