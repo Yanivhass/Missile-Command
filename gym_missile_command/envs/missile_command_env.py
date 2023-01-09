@@ -4,6 +4,7 @@ import sys
 import cv2
 import numpy as np
 import gym
+import utils
 from gym import spaces
 from gym.utils import seeding
 from gym.spaces.utils import flatten_space, flatten, unflatten
@@ -11,38 +12,10 @@ from PIL import Image
 
 from config import CONFIG
 
-# from game.Entities import Unit, City
-# from game.batteries import EnemyBattery, FriendlyBattery, CityBattery
-# from game.cities import EnemyCities
-# from gym_missile_command.game.missile import EnemyMissiles, FriendlyMissiles
-# from game.target import Target
-# from utils import rgetattr, rsetattr
-
 # Import Pygame and remove welcome message
 with contextlib.redirect_stdout(None):
     import pygame
 
-
-# def check_hits(missiles_xy, targets_xy, targeting_matrix, explosion_radius):
-#     """
-#
-#     Args:
-#         missiles_xy: A [n,2] matrix of x,y coordinates
-#         targets_xy: A [m,2] matrix of x,y coordinates
-#         targeting_matrix: a binary [m,n] matrix, [i,j] is true
-#             if entity i is the target of missiles j. False otherwise.
-#         explosion_radius: a scalar. If missiles is in explosion radius of it's target
-#             it is detonated
-#
-#     Returns:
-#         hits: a [n,1] matrix of how many missiles can hit each target
-#     """
-#     # distance matrix where [i,j] is the distance from the i'th target to the j'th missiles
-#     dist_matrix = np.linalg.norm(targets_xy[:, None, :] - missiles_xy[None, :, :], axis=-1)
-#     dist_matrix = np.where(dist_matrix <= explosion_radius, 1, 0)
-#     dist_matrix = dist_matrix & targeting_matrix  # only detonate on assigned target
-#     hits = np.sum(dist_matrix, axis=1)
-#     return hits, detonated
 
 def out_of_bounds(points):
     below = points[:, 1] < 0
@@ -73,7 +46,6 @@ def get_missiles_to_launch(missiles_list, launching_unit_id):
 
 def get_movement(velocity, angles, action):
     """
-
     Args:
         velocity: movement speed
         angles: current heading angle of entity, measured as angle from positive x-axis. degrees.
@@ -145,6 +117,12 @@ class MissileCommandEnv(gym.Env):
                 method.
         """
         super(MissileCommandEnv, self).__init__()
+        self.terrain = None
+        self.city_sprite = None
+        self.missile_sprite = None
+        self.bomb_sprite = None
+        self.battery_sprite = None
+        self.airplane_sprite = None
         attackers_count = CONFIG.ATTACKERS.QUANTITY
         attackers_missile_count = CONFIG.ATTACKERS.QUANTITY * CONFIG.ATTACKERS.MISSILES_PER_UNIT
         defenders_count = CONFIG.DEFENDERS.QUANTITY
@@ -313,49 +291,104 @@ class MissileCommandEnv(gym.Env):
         Compute observation. Current game graphics.
 
         """
+        if self.terrain is None:
+            self.terrain = cv2.imread("../sprites/terrain.png", cv2.IMREAD_UNCHANGED)
+            self.terrain[:,:,0:3] = cv2.cvtColor(self.terrain[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.terrain is None:
+                raise Exception("Failed to load sprite at " + "../sprites/terrain.png")
+            dim = (CONFIG.WIDTH, CONFIG.HEIGHT)
+            self.terrain = cv2.resize(self.terrain, dim, interpolation=cv2.INTER_AREA)  # resize image
+        if self.airplane_sprite is None:
+            self.airplane_sprite = cv2.imread("../sprites/airplane.png", cv2.IMREAD_UNCHANGED)
+            self.airplane_sprite[:,:,0:3] = cv2.cvtColor(self.airplane_sprite[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.airplane_sprite is None:
+                raise Exception("Failed to load sprite at " + "../sprites/airplane.png")
+            dim = (CONFIG.ATTACKERS.WIDTH, CONFIG.ATTACKERS.HEIGHT)
+            self.airplane_sprite = cv2.resize(self.airplane_sprite, dim, interpolation=cv2.INTER_AREA)  # resize image
+        if self.missile_sprite is None:
+            self.missile_sprite = cv2.imread("../sprites/missile.png", cv2.IMREAD_UNCHANGED)
+            self.missile_sprite[:,:,0:3] = cv2.cvtColor(self.missile_sprite[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.missile_sprite is None:
+                raise Exception("Failed to load sprite at " + "../sprites/missile.png")
+            dim = (CONFIG.DEFENDERS.MISSILES.WIDTH, CONFIG.DEFENDERS.MISSILES.HEIGHT)
+            self.missile_sprite = cv2.resize(self.missile_sprite, dim, interpolation=cv2.INTER_AREA)  # resize image
+        if self.bomb_sprite is None:
+            self.bomb_sprite = cv2.imread("../sprites/bomb.png", cv2.IMREAD_UNCHANGED)
+            self.bomb_sprite[:,:,0:3] = cv2.cvtColor(self.bomb_sprite[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.bomb_sprite is None:
+                raise Exception("Failed to load sprite at " + "../sprites/bomb.png")
+            dim = (CONFIG.ATTACKERS.MISSILES.WIDTH, CONFIG.ATTACKERS.MISSILES.HEIGHT)
+            self.bomb_sprite = cv2.resize(self.bomb_sprite, dim, interpolation=cv2.INTER_AREA)  # resize image
+        if self.battery_sprite is None:
+            self.battery_sprite = cv2.imread("../sprites/battery.png", cv2.IMREAD_UNCHANGED)
+            self.battery_sprite[:,:,0:3] = cv2.cvtColor(self.battery_sprite[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.battery_sprite is None:
+                raise Exception("Failed to load sprite at " + "../sprites/battery.png")
+            dim = (CONFIG.DEFENDERS.WIDTH, CONFIG.DEFENDERS.HEIGHT)
+            self.battery_sprite = cv2.resize(self.battery_sprite, dim, interpolation=cv2.INTER_AREA)  # resize image
+        if self.city_sprite is None:
+            self.city_sprite = cv2.imread("../sprites/city.png", cv2.IMREAD_UNCHANGED)
+            self.city_sprite[:,:,0:3] = cv2.cvtColor(self.city_sprite[:,:,0:3], cv2.COLOR_RGB2BGR)
+            if self.battery_sprite is None:
+                raise Exception("Failed to load sprite at " + "../sprites/battery.png")
+            dim = (CONFIG.CITIES.WIDTH, CONFIG.CITIES.HEIGHT)
+            self.city_sprite = cv2.resize(self.city_sprite, dim, interpolation=cv2.INTER_AREA)  # resize image
+    # self.airplane_dim = (CONFIG.ATTACKERS.WIDTH, CONFIG.ATTACKERS.HEIGHT)
+    # self.airplane = cv2.resize(self.airplane, self.airplane_dim, interpolation=cv2.INTER_AREA)  # resize image
+    # self.alpha_airplane = self.airplane[:, :, 3] / 255.0
+    # self.alpha_back = 1.0 - self.alpha_airplane
+    # self.airplane_width = self.airplane.shape[0]
+    # self.airplane_height = self.airplane.shape[1]
 
-        # Reset observation
+    # Reset observation
+
+
         if sensor_type == 'vision':
             # im = self.observation['sensors'][sensor_type].astype('uint8')
-            im = np.zeros((CONFIG.WIDTH, CONFIG.HEIGHT, 3), dtype=np.uint8)
-            im[:, :, 0] = CONFIG.COLORS.BACKGROUND[0]
-            im[:, :, 1] = CONFIG.COLORS.BACKGROUND[1]
-            im[:, :, 2] = CONFIG.COLORS.BACKGROUND[2]
+            # im = np.zeros((CONFIG.WIDTH, CONFIG.HEIGHT, 3), dtype=np.uint8)
+            # im[:, :, 0] = CONFIG.COLORS.BACKGROUND[0]
+            # im[:, :, 1] = CONFIG.COLORS.BACKGROUND[1]
+            # im[:, :, 2] = CONFIG.COLORS.BACKGROUND[2]
+            im = np.array(self.terrain[:,:,0:3])
 
             filled = -1
-
+            pose = np.zeros((3,))
             for i in range(self.attackers.shape[0]):
                 if self.attackers[i, 5] > 0:
-                    cv2.circle(im, self.attackers[i, 1:3].astype(int),
-                               CONFIG.ATTACKERS.RADIUS, CONFIG.ATTACKERS.COLOR, filled)
+                    # cv2.circle(im, self.attackers[i, 1:3].astype(int),
+                    #            CONFIG.ATTACKERS.RADIUS, CONFIG.ATTACKERS.COLOR, filled)
+                    im = utils.draw_sprite(image=im, sprite=self.airplane_sprite, pose=self.attackers[i, [1, 2, 4]])
                     cv2.circle(im, self.attackers[i, 1:3].astype(int),
                                CONFIG.ATTACKERS.RANGE, CONFIG.ATTACKERS.COLOR, 1)
             for i in range(self.attackers_missiles.shape[0]):
                 if (self.attackers_missiles[i, 5] > 0) & (self.attackers_missiles[i, 7] > 0):
-                    cv2.circle(im, self.attackers_missiles[i, 1:3].astype(int),
-                               CONFIG.ATTACKERS.MISSILES.RADIUS, CONFIG.ATTACKERS.MISSILES.COLOR, filled)
+                    im = utils.draw_sprite(image=im, sprite=self.bomb_sprite, pose=self.attackers_missiles[i, [1, 2, 4]])
+                    # cv2.circle(im, self.attackers_missiles[i, 1:3].astype(int),
+                    #            CONFIG.ATTACKERS.MISSILES.RADIUS, CONFIG.ATTACKERS.MISSILES.COLOR, filled)
             for i in range(self.defenders.shape[0]):
                 if self.defenders[i, 5] > 0:
-                    cv2.circle(im, self.defenders[i, 1:3].astype(int),
-                               CONFIG.DEFENDERS.RADIUS, CONFIG.DEFENDERS.COLOR, filled)
+                    pose[0:2] = self.defenders[i, [1, 2]]
+                    pose[2] = 0
+                    im = utils.draw_sprite(image=im, sprite=self.battery_sprite, pose=pose)
+                    # cv2.circle(im, self.defenders[i, 1:3].astype(int),
+                    #            CONFIG.DEFENDERS.RADIUS, CONFIG.DEFENDERS.COLOR, filled)
                     cv2.circle(im, self.defenders[i, 1:3].astype(int),
                                CONFIG.DEFENDERS.RANGE, CONFIG.DEFENDERS.COLOR, 1)
             for i in range(self.defenders_missiles.shape[0]):
                 if (self.defenders_missiles[i, 5] > 0) & (self.defenders_missiles[i, 7] > 0):
-                    cv2.circle(im, self.defenders_missiles[i, 1:3].astype(int),
-                               CONFIG.DEFENDERS.MISSILES.RADIUS, CONFIG.DEFENDERS.MISSILES.COLOR, filled)
+                    im = utils.draw_sprite(image=im, sprite=self.missile_sprite, pose=self.defenders_missiles[i, [1, 2, 4]])
+                    # cv2.circle(im, self.defenders_missiles[i, 1:3].astype(int),
+                    #            CONFIG.DEFENDERS.MISSILES.RADIUS, CONFIG.DEFENDERS.MISSILES.COLOR, filled)
             for i in range(self.cities.shape[0]):
                 if self.cities[i, 3] > 0:
-                    cv2.circle(im, self.cities[i, 1:3].astype(int),
-                               CONFIG.CITIES.RADIUS, CONFIG.CITIES.COLOR, filled)
+                    pose[0:2] = self.cities[i, [1, 2]]
+                    pose[2] = 0
+                    im = utils.draw_sprite(image=im, sprite=self.city_sprite,
+                                           pose=pose)
+                    # cv2.circle(im, self.cities[i, 1:3].astype(int),
+                    #            CONFIG.CITIES.RADIUS, CONFIG.CITIES.COLOR, filled)
 
             return im
-
-            # self.batteries.render(self.observation)
-            # self.cities.render(self.observation)
-            # self.enemy_missiles.render(self.observation)
-            # self.friendly_missiles.render(self.observation)
-            # self.target.render(self.observation)
 
     def _process_observation(self):
         """Process observation.
@@ -377,6 +410,7 @@ class MissileCommandEnv(gym.Env):
             interpolation=cv2.INTER_AREA,
         )
         return processed_observation.astype(CONFIG.IMAGE_DTYPE)
+
 
     def _extract_observation(self):
         obs = self.observation_dictionary.sample()
@@ -410,6 +444,7 @@ class MissileCommandEnv(gym.Env):
         obs['cities']['health'] = self.cities[:, 3]
         self.observation = flatten(self.observation_dictionary, obs)
         return self.observation
+
 
     def reset(self):
         """Reset the environment.
@@ -505,6 +540,7 @@ class MissileCommandEnv(gym.Env):
         self.attackers_missiles[:, 0] = missiles_id
 
         return self._extract_observation()
+
 
     def step(self, action):
         """
@@ -788,20 +824,6 @@ class MissileCommandEnv(gym.Env):
         self.observation = self._extract_observation()
         return self.observation, self.reward_timestep, done, {}
 
-    # def get_entities_indexes(self, friends_missiless, observation):
-    #     live_non_launched_fr_missile = np.where(
-    #         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 0) == True)
-    #     live_launched_fr_missile = np.where(
-    #         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 1) == True)
-    #
-    #     live_enemy_cities = np.where(enenmy_cities['health'] == 1)
-    #     target_enemy_cities = np.where(
-    #         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
-    #                        enenmy_cities['enemy_atc'] == True) == True)
-    #     non_target_enemy_cities = np.where(
-    #         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
-    #                        enenmy_cities['enemy_atc'] == False) == True)
-    #     return live_non_launched_fr_missile, live_launched_fr_missile, target_enemy_cities, non_target_enemy_cities
 
     def render(self, mode="rgb_array"):
         """Render the environment.
@@ -851,12 +873,15 @@ class MissileCommandEnv(gym.Env):
 
         # Limix max FPS
         self.clock.tick(CONFIG.FPS)
+        frame = cv2.flip(frame, 0)
         return frame
+
 
     def close(self):
         """Close the environment."""
         if self.display:
             pygame.quit()
+
 
     def destroy_units_by_id(self, side, unit_ids):
         # destroy unit and unlaunched missiles

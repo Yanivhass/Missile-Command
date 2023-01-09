@@ -28,7 +28,7 @@ if __name__ == "__main__":
     done = False
     step = 0
 
-    while step < 500 and not done:
+    while step < 200 and not done:
         action = env.action_space.sample()
         # Select an action (here, a random one)
         # random_action = True
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         # Render (or not) the environment
         frame = env.render(mode="rgb_array")  # "processed_observation"/"rgb_array"
         if frame is not None:
-            frame = np.array(Image.fromarray(frame.astype('uint8')))  # .rotate(180)
+            frame = np.array(Image.fromarray(frame.astype('uint8')))  #.rotate(180)
             recorded_frames.append(frame)
 
         step += 1

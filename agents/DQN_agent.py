@@ -2,7 +2,6 @@
 
 import gym
 from gym.spaces.utils import flatten_space, flatten, unflatten
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import random
 import torch
 import torch.nn as nn
@@ -22,8 +21,7 @@ from gym.wrappers.monitoring import video_recorder
 
 
 
-from QNetwork import Agent, dqn, action_id_to_dict
-
+from QNetwork import Agent, dqn
 
 # def show_video(env_name):
 #     mp4list = glob.glob('video/*.mp4')
@@ -36,7 +34,8 @@ from QNetwork import Agent, dqn, action_id_to_dict
 #         print("Could not find video")
 
 
-def show_video_of_model(agent, env):
+def show_video_of_model(agent, env_name):
+    env = gym.make(env_name)
     # vid = video_recorder.VideoRecorder(env, path="video/{}.mp4".format(env_name))
     recorded_frames = []
     agent.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
@@ -49,18 +48,16 @@ def show_video_of_model(agent, env):
         recorded_frames.append(frame)
 
         action = agent.act(state)
-        action_dict = action_id_to_dict(env, action)
-        state, reward, done, _ = env.step(action_dict)
 
-    clip = ImageSequenceClip(recorded_frames, fps=10)
-    clip.write_videofile('final.mp4')
+        state, reward, done, _ = env.step(action)
+
 
     env.close()
 
 
 if __name__ == "__main__":
     print(torch.cuda.is_available())
-    print(torch.device)
+    # print(torch.device())
     # Create the environment
     env = gym.make("gym_missile_command:missile-command-v0")
     env.seed(0)
@@ -68,9 +65,9 @@ if __name__ == "__main__":
     print('Number of actions: ', flatten_space(env.action_space).shape[0])
     # Reset it
     observation = env.reset()
-    #
-    # recorded_frames = []
-    #
+
+    recorded_frames = []
+
     BUFFER_SIZE = int(1e5)  # replay buffer size
     BATCH_SIZE = 64  # minibatch size
     GAMMA = 0.99  # discount factor
@@ -81,27 +78,22 @@ if __name__ == "__main__":
     state_size = env.observation_space.shape[0]
     action_size = 24  #flatten_space(env.action_dictionary["attackers"]).shape[0]
 
+    # While the episode is not finished
+    done = False
+    step = 0
 
+    # agent = Agent(state_size=8, action_size=4, seed=0)
+    scores = dqn(env=env,state_size=state_size, action_size=action_size, n_episodes=200000)
+
+    # plot the scores
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(np.arange(len(scores)), scores)
+    plt.ylabel('Score')
+    plt.xlabel('Episode #')
+    plt.show()
 
     agent = Agent(state_size=state_size, action_size=action_size, seed=0)
-    show_video_of_model(agent, env)
-    #
-    # # While the episode is not finished
-    # done = False
-    # step = 0
-    #
-    # # agent = Agent(state_size=8, action_size=4, seed=0)
-    # scores = dqn(env=env,state_size=state_size, action_size=action_size)
-    #
-    # # plot the scores
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # plt.plot(np.arange(len(scores)), scores)
-    # plt.ylabel('Score')
-    # plt.xlabel('Episode #')
-    # plt.show()
-    #
-    # agent = Agent(state_size=state_size, action_size=action_size, seed=0)
     # show_video_of_model(agent, 'LunarLander-v2')
     # show_video('LunarLander-v2')
 

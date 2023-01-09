@@ -1,5 +1,6 @@
 
 import random
+from datetime import datetime
 
 import gym
 from gym.spaces.utils import flatten_space as flatten
@@ -206,7 +207,7 @@ def action_id_to_dict(env, action_id):
     # action = flatten(env.action_dictionary, action)
     return action
 
-def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
+def dqn(env, state_size, action_size, n_episodes=2000, max_t=300, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
     """Deep Q-Learning.
 
     Params
@@ -227,8 +228,8 @@ def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0
         state = env.reset()
         score = 0
         for t in range(max_t):
-            if i_episode % 100 == 0:
-                env.render()
+            # if i_episode % 100 == 0:
+            #     env.render()
             action = agent.act(state, eps)
             action_dict = action_id_to_dict(env, action)
             next_state, reward, done, _ = env.step(action_dict)
@@ -241,8 +242,10 @@ def dqn(env, state_size, action_size, n_episodes=2000, max_t=1000, eps_start=1.0
         scores.append(score)  # save most recent score
         eps = max(eps_end, eps_decay * eps)  # decrease epsilon
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)), end="")
-        if i_episode % 100 == 0:
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
+        if i_episode % 1000 == 0:
+            now = datetime.now().strftime("%H:%M:%S")
+            print('\r{} Episode {}\tAverage Score: {:.2f}'.format(now, i_episode, np.mean(scores_window)))
+            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint{}.pth'.format(i_episode))
         if np.mean(scores_window) >= 20000.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode - 100,
                                                                                          np.mean(scores_window)))

@@ -32,7 +32,7 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 5  # number of entities
+        QUANTITY: int = 2  # number of entities
         RADIUS: int = 20
         RANGE: int = 400
         MAX_HEALTH: float = 1.0
@@ -52,10 +52,12 @@ class CONFIG:
 
         COLOR: tuple = (0, 0, 255)
         SIZE: int = 10
+        WIDTH: int = 70
+        HEIGHT: int = 70
 
         @dataclass
         class MISSILES:
-            RADIUS: int = 10
+            RADIUS: int = 4
             EXPLOSION_RADIUS: float = 30
             PROBA_IN: float = 0.005
             SPEED: float = 15.0
@@ -69,6 +71,8 @@ class CONFIG:
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
+            WIDTH: int = 20
+            HEIGHT: int = 20
 
     @dataclass
     class ATTACKERS:
@@ -77,7 +81,7 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 5
+        QUANTITY: int = 1
         RADIUS: int = 20
         RANGE: int = 300
         MAX_HEALTH: float = 1
@@ -98,6 +102,8 @@ class CONFIG:
 
         COLOR: tuple = (255, 0, 0)
         SIZE: int = 10
+        WIDTH: int = 100
+        HEIGHT: int = 100
 
         @dataclass
         class MISSILES:
@@ -113,6 +119,8 @@ class CONFIG:
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
+            WIDTH: int = 30
+            HEIGHT: int = 30
 
     @dataclass
     class CITIES:
@@ -140,6 +148,8 @@ class CONFIG:
 
         COLOR: tuple = (0, 255, 0)
         SIZE: int = 10
+        WIDTH: int = 100
+        HEIGHT: int = 100
     #
     # class ENNEMY_CITIES():
     #     """Cities configuration.

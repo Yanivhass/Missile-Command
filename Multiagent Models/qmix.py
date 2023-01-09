@@ -12,8 +12,8 @@ class QMixer(nn.Module):
         super(QMixer, self).__init__()
 
         self.args = args
-        self.n_agents = args.n_agents # number of agents
-        self.state_dim = int(np.prod(args.state_shape)) # dimension of state space (multipication of observations)
+        self.n_agents = args.n_agents  # number of agents
+        self.state_dim = int(np.prod(args.state_shape))  # dimension of state space (multipication of observations)
 
         self.embed_dim = args.mixing_embed_dim
 
