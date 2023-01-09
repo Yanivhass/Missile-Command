@@ -150,14 +150,14 @@ class MissileCommandEnv(gym.Env):
         defenders_count = CONFIG.DEFENDERS.QUANTITY
         defenders_missile_count = CONFIG.DEFENDERS.QUANTITY * CONFIG.DEFENDERS.MISSILES_PER_UNIT
         cities_count = CONFIG.CITIES.QUANTITY
-        # columns are [id, x, y, velocity, direction, health, num of missiles, target_id]
-        self.attackers = np.zeros((attackers_count, 8))
-        # columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]
-        self.attackers_missiles = np.zeros((attackers_missile_count, 8))
-        # columns are [id, x, y, velocity, direction, health, num of missiles, target_id]
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles, 8-fuel]
+        self.attackers = np.zeros((attackers_count, 9))
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]
+        self.attackers_missiles = np.zeros((attackers_missile_count, 10))
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles]
         self.defenders = np.zeros((defenders_count, 8))
-        # columns are [id, parent_id, x, y, velocity, direction, health, target_id, launched]
-        self.defenders_missiles = np.zeros((defenders_missile_count, 8))
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]
+        self.defenders_missiles = np.zeros((defenders_missile_count, 10))
         # columns are [id, x, y, health]
         self.cities = np.zeros((cities_count, 4))
 
@@ -234,7 +234,8 @@ class MissileCommandEnv(gym.Env):
                                 np.tile(pose_boxmax[3], (defenders_missile_count, 1)),
                                 shape=(defenders_missile_count, 1)),
                             # Missiles health is binary
-                            'health': spaces.MultiBinary(defenders_missile_count)
+                            'health': spaces.MultiBinary(defenders_missile_count),
+                            'fuel': spaces.Box(low=0, high=np.inf, shape=(defenders_missile_count, 1))
                         }),
                     }),
                     # cities are immobile and have no action
@@ -260,6 +261,7 @@ class MissileCommandEnv(gym.Env):
                             np.tile(pose_boxmax[3], (attackers_count, 1)),
                             shape=(attackers_count, 1)),
                         'health': spaces.Box(0, 1, shape=(attackers_count, 1)),
+                        'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_count, 1)),
                         'missiles': spaces.Dict({
                             # 0 - Ready, 1 - Launched
                             'launched': spaces.MultiBinary(attackers_missile_count),
@@ -281,6 +283,7 @@ class MissileCommandEnv(gym.Env):
                                 shape=(attackers_missile_count, 1)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(attackers_missile_count),
+                            'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1))
                         })
                     })
 
@@ -319,28 +322,32 @@ class MissileCommandEnv(gym.Env):
             im[:, :, 1] = CONFIG.COLORS.BACKGROUND[1]
             im[:, :, 2] = CONFIG.COLORS.BACKGROUND[2]
 
-            thickness = -1
+            filled = -1
 
             for i in range(self.attackers.shape[0]):
                 if self.attackers[i, 5] > 0:
                     cv2.circle(im, self.attackers[i, 1:3].astype(int),
-                               CONFIG.ATTACKERS.RADIUS, CONFIG.ATTACKERS.COLOR, thickness)
+                               CONFIG.ATTACKERS.RADIUS, CONFIG.ATTACKERS.COLOR, filled)
+                    cv2.circle(im, self.attackers[i, 1:3].astype(int),
+                               CONFIG.ATTACKERS.RANGE, CONFIG.ATTACKERS.COLOR, 1)
             for i in range(self.attackers_missiles.shape[0]):
                 if (self.attackers_missiles[i, 5] > 0) & (self.attackers_missiles[i, 7] > 0):
                     cv2.circle(im, self.attackers_missiles[i, 1:3].astype(int),
-                               CONFIG.ATTACKERS.MISSILES.RADIUS, CONFIG.ATTACKERS.MISSILES.COLOR, thickness)
+                               CONFIG.ATTACKERS.MISSILES.RADIUS, CONFIG.ATTACKERS.MISSILES.COLOR, filled)
             for i in range(self.defenders.shape[0]):
                 if self.defenders[i, 5] > 0:
                     cv2.circle(im, self.defenders[i, 1:3].astype(int),
-                               CONFIG.DEFENDERS.RADIUS, CONFIG.DEFENDERS.COLOR, thickness)
+                               CONFIG.DEFENDERS.RADIUS, CONFIG.DEFENDERS.COLOR, filled)
+                    cv2.circle(im, self.defenders[i, 1:3].astype(int),
+                               CONFIG.DEFENDERS.RANGE, CONFIG.DEFENDERS.COLOR, 1)
             for i in range(self.defenders_missiles.shape[0]):
                 if (self.defenders_missiles[i, 5] > 0) & (self.defenders_missiles[i, 7] > 0):
                     cv2.circle(im, self.defenders_missiles[i, 1:3].astype(int),
-                               CONFIG.DEFENDERS.MISSILES.RADIUS, CONFIG.DEFENDERS.MISSILES.COLOR, thickness)
+                               CONFIG.DEFENDERS.MISSILES.RADIUS, CONFIG.DEFENDERS.MISSILES.COLOR, filled)
             for i in range(self.cities.shape[0]):
                 if self.cities[i, 3] > 0:
                     cv2.circle(im, self.cities[i, 1:3].astype(int),
-                               CONFIG.CITIES.RADIUS, CONFIG.CITIES.COLOR, thickness)
+                               CONFIG.CITIES.RADIUS, CONFIG.CITIES.COLOR, filled)
 
             return im
 
@@ -377,23 +384,27 @@ class MissileCommandEnv(gym.Env):
         obs['attackers']['velocity'] = self.attackers[:, 3]
         obs['attackers']['direction'] = self.attackers[:, 4]
         obs['attackers']['health'] = self.attackers[:, 5]
+        obs['attackers']['fuel'] = self.attackers[:, 8]
         obs['attackers']['missiles']['pose'] = self.attackers_missiles[:, 1:3]
         obs['attackers']['missiles']['velocity'] = self.attackers_missiles[:, 3]
         obs['attackers']['missiles']['direction'] = self.attackers_missiles[:, 4]
         obs['attackers']['missiles']['health'] = self.attackers_missiles[:, 5].astype(int)
         obs['attackers']['missiles']['target'] = self.attackers_missiles[:, 6].astype(int)
         obs['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7].astype(int)
+        obs['attackers']['missiles']['fuel'] = self.attackers_missiles[:, 9]
 
         obs['defenders']['pose'] = self.defenders[:, 1:3]
         obs['defenders']['velocity'] = self.defenders[:, 3]
         obs['defenders']['direction'] = self.defenders[:, 4]
         obs['defenders']['health'] = self.defenders[:, 5]
+        # obs['defenders']['fuel'] = self.defenders[:, 8]
         obs['defenders']['missiles']['pose'] = self.defenders_missiles[:, 1:3]
         obs['defenders']['missiles']['velocity'] = self.defenders_missiles[:, 3]
         obs['defenders']['missiles']['direction'] = self.defenders_missiles[:, 4]
         obs['defenders']['missiles']['health'] = self.defenders_missiles[:, 5].astype(int)
         obs['defenders']['missiles']['target'] = self.defenders_missiles[:, 6].astype(int)
         obs['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7].astype(int)
+        obs['defenders']['missiles']['fuel'] = self.defenders_missiles[:, 9]
 
         obs['cities']['pose'] = self.cities[:, 1:3]
         obs['cities']['health'] = self.cities[:, 3]
@@ -419,7 +430,7 @@ class MissileCommandEnv(gym.Env):
                                        CONFIG.DEFENDERS.INIT_HEIGHT_RANGE[1] * CONFIG.WIDTH,
                                        size=CONFIG.DEFENDERS.QUANTITY)
         # defender team units
-        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles]
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles 8-fuel]
         id_offset = 0
         self.defenders[:, 0] = np.arange(CONFIG.DEFENDERS.QUANTITY)
         self.defenders[:, 1] = bat_pose_x
@@ -427,7 +438,7 @@ class MissileCommandEnv(gym.Env):
         self.defenders[:, 3] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
         self.defenders[:, 4] = CONFIG.DEFENDERS.LAUNCH_THETA
         self.defenders[:, 5] = 1
-        self.defenders[:, 6] = CONFIG.DEFENDERS.MISSILES_PER_UNIT
+        self.defenders[:, 7] = CONFIG.DEFENDERS.MISSILES_PER_UNIT
         id_offset += CONFIG.DEFENDERS.QUANTITY
 
         # defender cities
@@ -446,15 +457,17 @@ class MissileCommandEnv(gym.Env):
         # defender missiles
 
         missiles_id = np.arange(CONFIG.DEFENDERS.QUANTITY * CONFIG.DEFENDERS.MISSILES_PER_UNIT) + id_offset
-        self.defenders_missiles = np.zeros((CONFIG.DEFENDERS.QUANTITY, 9))
-        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id]
+        self.defenders_missiles = np.zeros((CONFIG.DEFENDERS.QUANTITY, 10))
+        # columns are columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id 9-fuel]
         self.defenders_missiles[:, 1] = bat_pose_x
         self.defenders_missiles[:, 2] = bat_pose_y
         self.defenders_missiles[:, 3] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
         self.defenders_missiles[:, 4] = CONFIG.DEFENDERS.LAUNCH_THETA
         self.defenders_missiles[:, 5] = 1
         self.defenders_missiles[:, 6] = 0
+        self.defenders_missiles[:, 7] = 0
         self.defenders_missiles[:, 8] = np.arange(CONFIG.DEFENDERS.QUANTITY)  # parent id
+        self.defenders_missiles[:, 9] = CONFIG.DEFENDERS.MISSILES.FUEL
         self.defenders_missiles = np.tile(self.defenders_missiles, (CONFIG.DEFENDERS.MISSILES_PER_UNIT, 1))
         self.defenders_missiles[:, 0] = missiles_id
 
@@ -465,7 +478,7 @@ class MissileCommandEnv(gym.Env):
         bat_pose_x = np.random.uniform(init_pose[0], init_pose[1], CONFIG.ATTACKERS.QUANTITY)
         bat_pose_y = np.random.uniform(init_height[0], init_height[1], CONFIG.ATTACKERS.QUANTITY)
 
-        # columns are [id, x, y, velocity, direction, health, num of missiles, target_id]
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles 8-fuel]
         id_offset = 0
         self.attackers[:, 0] = np.arange(CONFIG.ATTACKERS.QUANTITY)
         self.attackers[:, 1] = bat_pose_x
@@ -473,20 +486,21 @@ class MissileCommandEnv(gym.Env):
         self.attackers[:, 3] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
         self.attackers[:, 4] = CONFIG.ATTACKERS.LAUNCH_THETA
         self.attackers[:, 5] = 1
-        self.attackers[:, 6] = CONFIG.ATTACKERS.MISSILES_PER_UNIT
+        self.attackers[:, 7] = CONFIG.ATTACKERS.MISSILES_PER_UNIT
+        self.attackers[:, 8] = CONFIG.ATTACKERS.FUEL
         id_offset += CONFIG.ATTACKERS.QUANTITY
 
         missiles_id = np.arange(CONFIG.ATTACKERS.QUANTITY * CONFIG.ATTACKERS.MISSILES_PER_UNIT) + id_offset
-        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id]
-        self.attackers_missiles = np.zeros((CONFIG.ATTACKERS.QUANTITY, 9))
+        # columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id 9-fuel]
+        self.attackers_missiles = np.zeros((CONFIG.ATTACKERS.QUANTITY, 10))
         self.attackers_missiles[:, 1] = bat_pose_x
         self.attackers_missiles[:, 2] = bat_pose_y
         self.attackers_missiles[:, 3] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
         self.attackers_missiles[:, 4] = CONFIG.ATTACKERS.LAUNCH_THETA
         self.attackers_missiles[:, 5] = 1
-        self.attackers_missiles[:, 7] = 0  # target id
         self.attackers_missiles[:, 7] = 0  # launched
         self.attackers_missiles[:, 8] = np.arange(CONFIG.ATTACKERS.QUANTITY)  # parent id
+        self.attackers_missiles[:, 9] = CONFIG.ATTACKERS.MISSILES.FUEL
         self.attackers_missiles = np.tile(self.attackers_missiles, (CONFIG.ATTACKERS.MISSILES_PER_UNIT, 1))
         self.attackers_missiles[:, 0] = missiles_id
 
@@ -617,6 +631,22 @@ class MissileCommandEnv(gym.Env):
         if np.any(oob):
             # self.attackers[oob, 1:3] -= delta_pose[oob]
             self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oob, 0])
+
+        # decrement fuel
+        self.attackers[:, 8] -= 1
+        launched = self.attackers_missiles[:, 7] == 1
+        self.attackers_missiles[launched, 9] -= 1
+        # self.defenders[:, 8] -= 1
+        launched = self.defenders_missiles[:, 7] == 1
+        self.defenders_missiles[launched, 9] -= 1
+
+        # terminate if out of fuel
+        oof = np.argwhere(self.attackers[:, 8] == 0)
+        self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oof, 0])
+        self.attackers_missiles[np.argwhere(self.attackers_missiles[:, 9] == 0), [3, 5]] = 0
+        # oof = np.argwhere(self.defenders[:, 8] == 0)
+        # self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[oof, 0])
+        self.defenders_missiles[np.argwhere(self.defenders_missiles[:, 9] == 0), [3, 5]] = 0
 
         # defenders units
         [delta_pose, velocity, angles] = get_movement(self.defenders[:, 3], self.defenders[:, 4],

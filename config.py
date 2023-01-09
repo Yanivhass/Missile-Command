@@ -6,7 +6,7 @@ import numpy as np
 
 
 @dataclass
-class CONFIG():
+class CONFIG:
     """Configuration class.
 
     Attributes:
@@ -23,6 +23,7 @@ class CONFIG():
     SCREEN_WIDTH: int = 1000
     SEED = 42
     SPEED_MODIFIER = 0.9
+    BACK_COLOR: tuple = (0, 128, 0)  # Green
 
     @dataclass
     class DEFENDERS:
@@ -33,9 +34,9 @@ class CONFIG():
         """
         QUANTITY: int = 2  # number of entities
         RADIUS: int = 20
-        RANGE: float = 200
+        RANGE: int = 400
         MAX_HEALTH: float = 1.0
-        MISSILES_PER_UNIT = 2
+        MISSILES_PER_UNIT = 10
 
         INIT_HEIGHT_RANGE = [0.5, 0.6]
         INIT_POS_RANGE = [0.5, 0.6]
@@ -63,6 +64,7 @@ class CONFIG():
             NB_ACTIONS: int = 9
             LAUNCH_THETA: float = 90
             DTHETA = np.arange(-10, 25, 5)
+            FUEL: int = 10
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
@@ -76,9 +78,10 @@ class CONFIG():
         """
         QUANTITY: int = 1
         RADIUS: int = 20
-        RANGE: float = 466.0
+        RANGE: int = 300
         MAX_HEALTH: float = 1
-        MISSILES_PER_UNIT = 10
+        MISSILES_PER_UNIT: int = 4
+        FUEL: int = 200
 
         INIT_HEIGHT_RANGE = [0.5, 0.7]
         INIT_POS_RANGE = [0.0, 0.3]
@@ -103,6 +106,7 @@ class CONFIG():
             SPEED: float = 20.0
             LAUNCH_THETA: float = 0
             DTHETA = np.arange(-10, 25, 5)
+            FUEL: int = 10
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
@@ -209,7 +213,7 @@ class CONFIG():
             FRIENDLY_MISSILE (tuple): #00ff00.
             TARGET (tuple): #ffffff.
         """
-        BACKGROUND: tuple = (0, 0, 0)
+        BACKGROUND: tuple = (0, 128, 0)
         BLUE_TEAM: tuple = (255, 255, 255)
         BLUE_TEAM_TARGETING_RANGE: tuple = (125, 255, 125)
         BLUE_TEAM_MISSILE: tuple = (255, 0, 0)
@@ -265,13 +269,10 @@ class CONFIG():
             ENNEMY_TARGET_MISSED (float); reward for each friendly missile target miss.
         """
         DESTROYED_CITY: float = +1000.0
-        DESTROYED_AA_BATTERY: float = +50.0
+        DESTROYED_AA_BATTERY: float = +100.0
         DESTROYED_BOMBER: float = -200.0
         # DESTROYED_MISSILES: float = + 15.0
-        MISSILE_LAUNCHED: float = -10.0
-        DESTROYED_FRIENDLY_BATTERY: float = -50.0
-        DESTROYED_FRIENDLY_MISSILES: float = -10.0
-        FRIENDLY_MISSILE_LAUNCHED: float = +5.0
+        MISSILE_LAUNCHED: float = -20.0
 
     # @dataclass
     # class TARGET():
