@@ -32,7 +32,7 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 2  # number of entities
+        QUANTITY: int = 5  # number of entities
         RADIUS: int = 20
         RANGE: int = 400
         MAX_HEALTH: float = 1.0
@@ -58,13 +58,14 @@ class CONFIG:
             RADIUS: int = 10
             EXPLOSION_RADIUS: float = 30
             PROBA_IN: float = 0.005
-            SPEED: float = 40.0
+            SPEED: float = 15.0
             MAX_HEALTH = 1.0
 
             NB_ACTIONS: int = 9
             LAUNCH_THETA: float = 90
             DTHETA = np.arange(-10, 25, 5)
-            FUEL: int = 10
+            FUEL: int = 30
+            GUIDED: bool = True
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
@@ -76,7 +77,7 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 1
+        QUANTITY: int = 5
         RADIUS: int = 20
         RANGE: int = 300
         MAX_HEALTH: float = 1
@@ -94,6 +95,7 @@ class CONFIG:
         DETECTION_RANGE = [200.0, 2000.0]
         KILL_RANGE = 1000.0
 
+
         COLOR: tuple = (255, 0, 0)
         SIZE: int = 10
 
@@ -106,7 +108,8 @@ class CONFIG:
             SPEED: float = 20.0
             LAUNCH_THETA: float = 0
             DTHETA = np.arange(-10, 25, 5)
-            FUEL: int = 10
+            FUEL: int = 200
+            GUIDED: bool = False
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10

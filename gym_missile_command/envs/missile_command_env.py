@@ -530,7 +530,10 @@ class MissileCommandEnv(gym.Env):
         # Reset current reward
         # ------------------------------------------
         self.reward_timestep = 0.0
-        # action = unflatten(self.action_dictionary,action)
+        reward_battery_destroyed = 0
+        reward_city_destroyed = 0
+        reward_bomber_destroyed = 0
+        reward_missiles_launched = 0
 
         # Step functions: update state
         # ------------------------------------------
@@ -581,7 +584,7 @@ class MissileCommandEnv(gym.Env):
             self.attackers_missiles[missiles_to_launch, 4] = direction
             self.attackers_missiles[missiles_to_launch, 3] = \
                 CONFIG.ATTACKERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
-
+            reward_missiles_launched += np.sum(missiles_to_launch) * CONFIG.REWARD.MISSILE_LAUNCHED
         # defenders
         # chose one ready missile from each living attacker and
         # launch for parent who chose to fire
@@ -643,7 +646,7 @@ class MissileCommandEnv(gym.Env):
         # terminate if out of fuel
         oof = np.argwhere(self.attackers[:, 8] == 0)
         self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oof, 0])
-        self.attackers_missiles[np.argwhere(self.attackers_missiles[:, 9] == 0), [3, 5]] = 0
+        # self.attackers_missiles[np.argwhere(self.attackers_missiles[:, 9] == 0), [3, 5]] = 0
         # oof = np.argwhere(self.defenders[:, 8] == 0)
         # self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[oof, 0])
         self.defenders_missiles[np.argwhere(self.defenders_missiles[:, 9] == 0), [3, 5]] = 0
@@ -678,6 +681,11 @@ class MissileCommandEnv(gym.Env):
                 [np.cos(angles), np.sin(angles)])).T
             self.attackers_missiles[attackers_launched, 1:3] += \
                 delta.reshape(self.attackers_missiles[attackers_launched, 1:3].shape)
+            target_id = self.attackers_missiles[attackers_launched, 6].astype(int)
+            y = all_defenders[target_id, 2] - self.attackers_missiles[attackers_launched, 2]
+            x = all_defenders[target_id, 1] - self.attackers_missiles[attackers_launched, 1]
+            direction = np.mod(np.rad2deg(np.arctan2(y, x)), 360)  # set direction
+            self.attackers_missiles[attackers_launched, 4] = direction
             oob = out_of_bounds(self.attackers_missiles[:, 1:3])
             if np.any(oob):
                 # self.attackers_missiles[oob, 1:3] -= delta[oob,:].reshape(
@@ -685,7 +693,7 @@ class MissileCommandEnv(gym.Env):
                 self.attackers_missiles[oob, 3] = 0  # velocity,health = 0
                 self.attackers_missiles[oob, 5] = 0
 
-                # defenders missiles - launched
+        # defenders missiles - launched
         defenders_launched = np.argwhere((self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0))
         if defenders_launched.shape[0] > 0:
             angles = self.defenders_missiles[defenders_launched, 4] * np.pi / 180.0  # degrees to rads
@@ -693,6 +701,11 @@ class MissileCommandEnv(gym.Env):
                 [np.cos(angles), np.sin(angles)])).T
             self.defenders_missiles[defenders_launched, 1:3] += \
                 delta.reshape(self.defenders_missiles[defenders_launched, 1:3].shape)
+            target_id = self.defenders_missiles[defenders_launched, 6].astype(int)
+            y = all_attackers[target_id, 2] - self.defenders_missiles[defenders_launched, 2]
+            x = all_attackers[target_id, 1] - self.defenders_missiles[defenders_launched, 1]
+            direction = np.mod(np.rad2deg(np.arctan2(y, x)), 360)  # set direction
+            self.defenders_missiles[defenders_launched, 4] = direction
             oob = out_of_bounds(self.defenders_missiles[:, 1:3])
             if np.any(oob):
                 # self.defenders_missiles[oob, 1:3] -= delta[oob,:].reshape(self.defenders_missiles[oob, 1:3].shape)
@@ -705,9 +718,7 @@ class MissileCommandEnv(gym.Env):
         def_exp_rad = CONFIG.DEFENDERS.MISSILES.EXPLOSION_RADIUS
         defenders_launched = np.any((self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0))
         attackers_launched = np.any((self.attackers_missiles[:, 7] == 1) & (self.attackers_missiles[:, 5] > 0))
-        reward_battery_destroyed = 0
-        reward_city_destroyed = 0
-        reward_bomber_destroyed = 0
+
         # get range from launched defender missiles to attackers and their launched missiles
         if np.any(defenders_launched):
             defenders_launched = np.argwhere((self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0))
@@ -720,7 +731,7 @@ class MissileCommandEnv(gym.Env):
                 self.defenders_missiles[defenders_hit, 5] = 0
                 attackers_hit = np.isin(self.attackers[:, 0], target_id[hits])
                 if np.any(attackers_hit):
-                    self.attackers[attackers_hit, [3, 5]] = 0  # velocity, health = 0
+                    self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[attackers_hit, 0])
                     reward_bomber_destroyed = np.sum(attackers_hit) * CONFIG.REWARD.DESTROYED_BOMBER
                 attackers_hit = np.isin(self.attackers_missiles[:, 0], target_id[hits])
                 if np.any(attackers_hit):
@@ -738,7 +749,7 @@ class MissileCommandEnv(gym.Env):
                 self.attackers_missiles[attackers_hit, 5] = 0
                 defenders_hit = np.isin(self.defenders[:, 0], target_id[hits])
                 if np.any(defenders_hit):
-                    self.defenders[defenders_hit, [3, 5]] = 0  # velocity, health = 0
+                    self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[defenders_hit, 0])
                     reward_battery_destroyed = np.sum(defenders_hit) * CONFIG.REWARD.DESTROYED_AA_BATTERY
                 # Defenders missiles cannot be hit by attackers
                 # defenders_hit = np.isin(self.defenders_missiles[:, 0], target_id[hits])
@@ -769,26 +780,28 @@ class MissileCommandEnv(gym.Env):
 
         self.timestep += 1
         # self.reward_total += friendly_battery_reward + enemy_battery_reward + cities_reward + self.reward_timestep
-        self.reward_timestep = reward_battery_destroyed + reward_bomber_destroyed + reward_city_destroyed
+        self.reward_timestep = reward_battery_destroyed + \
+                               reward_bomber_destroyed + \
+                               reward_city_destroyed + \
+                               reward_missiles_launched
         self.reward_total += self.reward_timestep
         self.observation = self._extract_observation()
         return self.observation, self.reward_timestep, done, {}
 
-
-# def get_entities_indexes(self, friends_missiless, observation):
-#     live_non_launched_fr_missile = np.where(
-#         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 0) == True)
-#     live_launched_fr_missile = np.where(
-#         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 1) == True)
-#
-#     live_enemy_cities = np.where(enenmy_cities['health'] == 1)
-#     target_enemy_cities = np.where(
-#         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
-#                        enenmy_cities['enemy_atc'] == True) == True)
-#     non_target_enemy_cities = np.where(
-#         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
-#                        enenmy_cities['enemy_atc'] == False) == True)
-#     return live_non_launched_fr_missile, live_launched_fr_missile, target_enemy_cities, non_target_enemy_cities
+    # def get_entities_indexes(self, friends_missiless, observation):
+    #     live_non_launched_fr_missile = np.where(
+    #         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 0) == True)
+    #     live_launched_fr_missile = np.where(
+    #         np.logical_and(friends_missiless['health'] == 1, friends_missiless['launch'] == 1) == True)
+    #
+    #     live_enemy_cities = np.where(enenmy_cities['health'] == 1)
+    #     target_enemy_cities = np.where(
+    #         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
+    #                        enenmy_cities['enemy_atc'] == True) == True)
+    #     non_target_enemy_cities = np.where(
+    #         np.logical_and(np.logical_and(enenmy_cities['health'] == 1, enenmy_cities['launch'] == 1),
+    #                        enenmy_cities['enemy_atc'] == False) == True)
+    #     return live_non_launched_fr_missile, live_launched_fr_missile, target_enemy_cities, non_target_enemy_cities
 
     def render(self, mode="rgb_array"):
         """Render the environment.
@@ -840,27 +853,29 @@ class MissileCommandEnv(gym.Env):
         self.clock.tick(CONFIG.FPS)
         return frame
 
-
     def close(self):
         """Close the environment."""
         if self.display:
             pygame.quit()
 
-
     def destroy_units_by_id(self, side, unit_ids):
         # destroy unit and unlaunched missiles
         if side == "attackers":
-            self.attackers[unit_ids.astype(int), [3, 5]] = 0  # velocity, health = 0
+            self.attackers[unit_ids.astype(int), 3] = 0  # velocity, health = 0
+            self.attackers[unit_ids.astype(int), 5] = 0
             missiles_unlaunched = self.attackers_missiles[:, 7] == 0
             missile_ids = np.isin(self.attackers_missiles[missiles_unlaunched, 8], unit_ids).astype(int)
             self.attackers_missiles[missile_ids, 3] = 0  # velocity = 0
             self.attackers_missiles[missile_ids, 5] = 0  # health = 0
-        if side == "defenders":
-            self.defenders[unit_ids.astype(int), [3, 5]] = 0  # velocity, health = 0
+        elif side == "defenders":
+            self.defenders[unit_ids.astype(int), 3] = 0  # velocity, health = 0
+            self.defenders[unit_ids.astype(int), 5] = 0  # velocity, health = 0
             missiles_unlaunched = self.defenders_missiles[:, 7] == 0
             missile_ids = np.isin(self.defenders_missiles[missiles_unlaunched, 8], unit_ids).astype(int)
             self.defenders_missiles[missile_ids, 3] = 0  # velocity = 0
             self.defenders_missiles[missile_ids, 5] = 0  # health = 0
+        else:
+            print("Warning: destroy_units_by_id side should be \"attackers\" or \"defenders\"")
 
 
 if __name__ == "__main__":

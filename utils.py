@@ -2,6 +2,8 @@
 
 import functools
 
+import numpy as np
+
 from config import CONFIG
 
 
@@ -27,8 +29,10 @@ def get_cv2_xy(x, y):
 
 def rgetattr(obj, attr, *args):
     """Recursive getattr function."""
+
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
+
     return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 
@@ -36,3 +40,26 @@ def rsetattr(obj, attr, val):
     """Recursive setattr function."""
     pre, _, post = attr.rpartition('.')
     return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+
+
+def angle_diff(a, b):
+    """
+    Turn angle in degrees from a to b
+    """
+    a = np.mod(a, 360)
+    b = np.mod(b, 360)
+    d = a - b
+    if np.abs(360 - np.abs(d)) < np.abs(d):
+        d = np.abs(d) - 360
+    return d
+
+
+def pov_transform(frame, poses):
+    """
+    Transform poses to the given frame
+    poses and are given as np array in global frame with columns
+     [x, y, heading(degrees)]
+    """
+    poses[0:2, :] = poses[0:2, :] - frame[0:2]
+    poses[2, :] = np.mod(poses[2, :] - frame[0:2], 360)
+    return poses
