@@ -119,8 +119,8 @@ class CONFIG:
 
             COLOR: tuple = (255, 255, 255)
             SIZE: int = 10
-            WIDTH: int = 30
-            HEIGHT: int = 30
+            WIDTH: int = 40
+            HEIGHT: int = 40
 
     @dataclass
     class CITIES:

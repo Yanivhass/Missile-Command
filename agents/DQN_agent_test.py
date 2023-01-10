@@ -39,7 +39,7 @@ from QNetwork import Agent, dqn, action_id_to_dict
 def show_video_of_model(agent, env, max_t=200):
     # vid = video_recorder.VideoRecorder(env, path="video/{}.mp4".format(env_name))
     recorded_frames = []
-    agent.qnetwork_local.load_state_dict(torch.load('../checkpoints/checkpoint37000.pth'))
+    agent.qnetwork_local.load_state_dict(torch.load('checkpoint45000.pth'))
     state = env.reset()
     done = False
     for t in range(max_t):
