@@ -14,12 +14,12 @@ import base64, io
 import numpy as np
 from collections import deque, namedtuple
 
-BUFFER_SIZE = int(1e5)  # replay buffer size
-BATCH_SIZE = 64  # minibatch size
-GAMMA = 0.99  # discount factor
-TAU = 1e-3  # for soft update of target parameters
-LR = 5e-4  # learning rate
-UPDATE_EVERY = 4  # how often to update the network
+# BUFFER_SIZE = int(1e5)  # replay buffer size
+# BATCH_SIZE = 64  # minibatch size
+# GAMMA = 0.99  # discount factor
+# TAU = 1e-3  # for soft update of target parameters
+# LR = 5e-4  # learning rate
+# UPDATE_EVERY = 4  # how often to update the network
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 from config import CONFIG
@@ -55,7 +55,7 @@ class QNetwork(nn.Module):
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, state_size, action_size, seed, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, TAU, UPDATE_EVERY):
         """Initialize an Agent object.
 
         Params
@@ -72,6 +72,12 @@ class Agent():
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
         self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+        self.BUFFER_SIZE = BUFFER_SIZE
+        self.BATCH_SIZE = BATCH_SIZE
+        self.LR = LR
+        self.GAMMA = GAMMA
+        self.TAU = TAU
+        self.UPDATE_EVERY = UPDATE_EVERY
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
@@ -83,12 +89,12 @@ class Agent():
         self.memory.add(state, action, reward, next_state, done)
 
         # Learn every UPDATE_EVERY time steps.
-        self.t_step = (self.t_step + 1) % UPDATE_EVERY
+        self.t_step = (self.t_step + 1) % self.UPDATE_EVERY
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
-            if len(self.memory) > BATCH_SIZE:
+            if len(self.memory) > self.BATCH_SIZE:
                 experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
+                self.learn(experiences, self.GAMMA)
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
@@ -136,7 +142,7 @@ class Agent():
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
+        self.soft_update(self.qnetwork_local, self.qnetwork_target, self.TAU)
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
@@ -207,7 +213,9 @@ def action_id_to_dict(env, action_id):
     # action = flatten(env.action_dictionary, action)
     return action
 
-def dqn(env, state_size, action_size, n_episodes=2000, max_t=300, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
+
+def dqn(env, state_size, action_size, BUFFER_SIZE, BATCH_SIZE, LR, GAMMA, TAU, UPDATE_EVERY,
+        n_episodes=2000, max_t=300, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
     """Deep Q-Learning.
 
     Params
@@ -220,7 +228,8 @@ def dqn(env, state_size, action_size, n_episodes=2000, max_t=300, eps_start=1.0,
     """
     # env = gym.make("gym_missile_command:missile-command-v0")
     # env.seed(0)
-    agent = Agent(state_size=state_size, action_size=action_size, seed=0)
+    agent = Agent(state_size=state_size, action_size=action_size, seed=0,
+                  BUFFER_SIZE=BUFFER_SIZE, BATCH_SIZE=BATCH_SIZE, LR=LR, GAMMA=GAMMA, TAU=TAU, UPDATE_EVERY=UPDATE_EVERY)
     scores = []  # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start  # initialize epsilon
