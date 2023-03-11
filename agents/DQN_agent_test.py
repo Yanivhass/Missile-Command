@@ -39,7 +39,7 @@ from QNetwork import Agent, dqn, action_id_to_dict
 def show_video_of_model(agent, env, max_t=200):
     # vid = video_recorder.VideoRecorder(env, path="video/{}.mp4".format(env_name))
     recorded_frames = []
-    agent.qnetwork_local.load_state_dict(torch.load('checkpoint45000.pth'))
+    agent.qnetwork_local.load_state_dict(torch.load('checkpoint53000 exploration.pth'))
     state = env.reset()
     done = False
     for t in range(max_t):
@@ -57,7 +57,7 @@ def show_video_of_model(agent, env, max_t=200):
     clip = ImageSequenceClip(recorded_frames, fps=10)
     clip.write_videofile('final.mp4')
 
-    env.close()
+
 
 
 if __name__ == "__main__":
@@ -87,6 +87,7 @@ if __name__ == "__main__":
 
     agent = Agent(state_size=state_size, action_size=action_size, seed=0)
     show_video_of_model(agent, env)
+    env.close()
     #
     # # While the episode is not finished
     # done = False

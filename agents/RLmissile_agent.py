@@ -14,7 +14,8 @@ import __init__
 if __name__ == "__main__":
 
     # Create the environment
-    env = gym.make("gym_missile_command:missile-command-v0")
+    config = {}
+    env = gym.make("missile-command-v0",env_config={})
 
     # Reset it
     observation = env.reset()
@@ -58,7 +59,7 @@ if __name__ == "__main__":
 
     clip = ImageSequenceClip(recorded_frames, fps=10)
     clip.write_videofile('capt.mp4')
-
+    env.close()
         # # Select an action (here, a random one)
         # en_action = []
         # for ind in range(CONFIG.ENNEMY_BATTERY.NUMBER):

@@ -22,7 +22,6 @@ from gym.wrappers.monitoring import video_recorder
 # import glob
 
 
-
 from QNetwork import Agent, dqn, action_id_to_dict
 
 
@@ -65,15 +64,17 @@ def objective(trial):
     LR = trial.suggest_float("LR", 1e-5, 1e-2, log=True)
     GAMMA = trial.suggest_float("GAMMA", 0.9, 0.999, log=True)
     TAU = trial.suggest_float("TAU", 1e-3, 1e-1, log=True)
-    BUFFER_SIZE = trial.suggest_int("BUFFER_SIZE", 1e4, 1e5)
-    BATCH_SIZE = trial.suggest_int("BATCH_SIZE", 64, 256)
-    UPDATE_EVERY = trial.suggest_int("UPDATE_EVERY", 4, 20)
-    env = gym.make("gym_missile_command:missile-command-v0")
+    BUFFER_SIZE = int(1e5)  # trial.suggest_int("BUFFER_SIZE", 1e4, 1e5)
+    BATCH_SIZE = 64  # trial.suggest_int("BATCH_SIZE", 64, 256)
+    UPDATE_EVERY = 4  # trial.suggest_int("UPDATE_EVERY", 4, 20)
+    EPS_DECAY = trial.suggest_float("EPS_DECAY", 0.9, 0.9999, log=True)  # 0.995
+    env = gym.make("missile-command-v0")
     env.seed(0)
     state_size = env.observation_space.shape[0]
     action_size = 24  # flatten_space(env.action_dictionary["attackers"]).shape[0]
-    scores = dqn(env=env, state_size=state_size, action_size=action_size, n_episodes=200000,
-                 LR=LR, GAMMA=GAMMA, TAU=TAU, BUFFER_SIZE=BUFFER_SIZE, BATCH_SIZE=BATCH_SIZE, UPDATE_EVERY=UPDATE_EVERY)
+    scores = dqn(env=env, state_size=state_size, action_size=action_size, n_episodes=40000, LR=LR, GAMMA=GAMMA,
+                 TAU=TAU,
+                 BUFFER_SIZE=BUFFER_SIZE, BATCH_SIZE=BATCH_SIZE, UPDATE_EVERY=UPDATE_EVERY, eps_decay=EPS_DECAY)
     return scores
 
 
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     print(torch.cuda.is_available())
     print(torch.device)
     # Create the environment
-    env = gym.make("gym_missile_command:missile-command-v0")
+    env = gym.make("missile-command-v0")
     env.seed(0)
     print('State shape: ', env.observation_space.shape[0])
     print('Number of actions: ', flatten_space(env.action_space).shape[0])
@@ -98,9 +99,7 @@ if __name__ == "__main__":
     UPDATE_EVERY = 4  # how often to update the network'''
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     state_size = env.observation_space.shape[0]
-    action_size = 24  #flatten_space(env.action_dictionary["attackers"]).shape[0]
-
-
+    action_size = 24  # flatten_space(env.action_dictionary["attackers"]).shape[0]
 
     # agent = Agent(state_size=state_size, action_size=action_size, seed=0)
     study = optuna.create_study(
@@ -131,4 +130,3 @@ if __name__ == "__main__":
     # agent = Agent(state_size=state_size, action_size=action_size, seed=0)
     # show_video_of_model(agent, 'LunarLander-v2')
     # show_video('LunarLander-v2')
-

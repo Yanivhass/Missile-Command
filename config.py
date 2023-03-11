@@ -32,13 +32,13 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 2  # number of entities
+        QUANTITY: int = 4  # number of entities
         RADIUS: int = 20
-        RANGE: int = 400
+        RANGE: int = 600
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 10
 
-        INIT_HEIGHT_RANGE = [0.5, 0.6]
+        INIT_HEIGHT_RANGE = [0.4, 0.9]
         INIT_POS_RANGE = [0.5, 0.6]
         SPEED: float = 0.0
         # LAUNCH_VEL = [0.0, 1.0]
@@ -57,10 +57,10 @@ class CONFIG:
 
         @dataclass
         class MISSILES:
-            RADIUS: int = 4
+            RADIUS: int = 10
             EXPLOSION_RADIUS: float = 30
             PROBA_IN: float = 0.005
-            SPEED: float = 15.0
+            SPEED: float = 21.0
             MAX_HEALTH = 1.0
 
             NB_ACTIONS: int = 9
@@ -85,11 +85,11 @@ class CONFIG:
         RADIUS: int = 20
         RANGE: int = 300
         MAX_HEALTH: float = 1
-        MISSILES_PER_UNIT: int = 4
-        FUEL: int = 200
+        MISSILES_PER_UNIT: int = 5
+        FUEL: int = 250
 
-        INIT_HEIGHT_RANGE = [0.5, 0.7]
-        INIT_POS_RANGE = [0.0, 0.3]
+        INIT_HEIGHT_RANGE = [0.5, 0.7] #[0.1, 0.9] #
+        INIT_POS_RANGE = [0.0, 0.3] #[0.1, 0.9] #
         SPEED: float = 20.0
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 0
@@ -131,12 +131,12 @@ class CONFIG:
             RADIUS (float): radius of a city object.
         """
 
-        QUANTITY: int = 2
+        QUANTITY: int = 3
         RADIUS: int = 30
         # RANGE: float = 466.0
         MAX_HEALTH: float = 1
 
-        INIT_HEIGHT_RANGE = [0.5, 0.9]
+        INIT_HEIGHT_RANGE = [0.4, 0.9]
         INIT_POS_RANGE = [0.7, 0.8]
         SPEED: float = 0.0
         # LAUNCH_VEL = [0.0, 1.0]

@@ -3,11 +3,11 @@ import contextlib
 import sys
 import cv2
 import numpy as np
-import gym
+# import gym
 import utils
-from gym import spaces
-from gym.utils import seeding
-from gym.spaces.utils import flatten_space, flatten, unflatten
+# from gym import spaces
+# from gym.utils import seeding
+# from gym.spaces.utils import flatten_space, flatten, unflatten
 from PIL import Image
 
 from config import CONFIG
@@ -15,6 +15,18 @@ from config import CONFIG
 # Import Pygame and remove welcome message
 with contextlib.redirect_stdout(None):
     import pygame
+
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.utils import seeding
+from gymnasium.spaces.utils import flatten_space, flatten, unflatten
+from gymnasium.spaces import Discrete, Box
+import os
+import random
+
+import ray
+from ray import air, tune
+from ray.rllib.env.env_context import EnvContext
 
 
 def out_of_bounds(points):
@@ -82,7 +94,7 @@ class MissileCommandEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"],
                 'video.frames_per_second': CONFIG.FPS}
 
-    def __init__(self):
+    def __init__(self, env_config: EnvContext):
         """Initialize MissileCommand environment.
 
         Args:
@@ -148,7 +160,7 @@ class MissileCommandEnv(gym.Env):
         num_of_targets = attackers_count + attackers_missile_count
         defender_targets = np.ones((1, defenders_missile_count)) * num_of_targets
         # defender_targets[:, 1] = num_of_targets
-        self.action_space = spaces.Dict(
+        self.action_dictionary = spaces.Dict(
             # Actions, currently only for attackers
             {'attackers': spaces.Dict(
                 {
@@ -167,12 +179,14 @@ class MissileCommandEnv(gym.Env):
                     })
             }
         )
+        self.action_space = spaces.MultiDiscrete([3, (defenders_count + cities_count), 2])
         # self.action_space = flatten_space(self.action_dictionary)
         # pose_boxmin = pose_boxmax = np.zeros((1, 4))
         pose_boxmin = np.array([0, 0, 0, 0])
         pose_boxmax = np.array([CONFIG.WIDTH, CONFIG.HEIGHT, 100, 360])
 
-        self.observation_dictionary = \
+        # self.observation_dictionary = \
+        self.observation_space = \
             spaces.Dict(
                 {
                     # state-space for the defending team batteries
@@ -224,6 +238,7 @@ class MissileCommandEnv(gym.Env):
                             shape=(cities_count, 2)),
                         'health': spaces.Box(0, 1, shape=(cities_count, 1)),
                     }),
+
                     # state-space for the attacking team bombers
                     'attackers': spaces.Dict({
                         'pose': spaces.Box(
@@ -266,11 +281,12 @@ class MissileCommandEnv(gym.Env):
                     })
 
                 })
+        self.observation_dictionary = self.observation_space
         # self.map = spaces.Box(0, 255, shape=(CONFIG.WIDTH, CONFIG.HEIGHT))
-        self.observation_space = flatten_space(self.observation_dictionary)
-        self.observation = self.observation_dictionary.sample()
-        # self.observation_vec = flatten(self.observation)
-        self.observation_vec = flatten(self.observation_dictionary, self.observation)
+        # self.observation_space = flatten_space(self.observation_dictionary)
+        # self.observation = self.observation_dictionary.sample()
+        # # self.observation_vec = flatten(self.observation)
+        # self.observation_vec = flatten(self.observation_dictionary, self.observation)
         # Set the seed for reproducibility
         self.seed(CONFIG.SEED)
         # Initialize the state
@@ -412,7 +428,7 @@ class MissileCommandEnv(gym.Env):
         return processed_observation.astype(CONFIG.IMAGE_DTYPE)
 
 
-    def _extract_observation(self):
+    def state_to_dict(self):
         obs = self.observation_dictionary.sample()
         obs['attackers']['pose'] = self.attackers[:, 1:3]
         obs['attackers']['velocity'] = self.attackers[:, 3]
@@ -445,8 +461,23 @@ class MissileCommandEnv(gym.Env):
         self.observation = flatten(self.observation_dictionary, obs)
         return self.observation
 
+    def action_to_dict(self,action):
+        obs = self.action_dictionary.sample()
+        obs['attackers']['movement'] = self.attackers[:, 1:3]
+        obs['attackers']['target'] = self.attackers[:, 3]
+        obs['attackers']['target'] = self.attackers[:, 3]
 
-    def reset(self):
+
+        obs['defenders']['pose'] = self.defenders[:, 1:3]
+        obs['defenders']['velocity'] = self.defenders[:, 3]
+        obs['defenders']['direction'] = self.defenders[:, 4]
+
+        obs['cities']['health'] = self.cities[:, 3]
+        self.observation = flatten(self.observation_dictionary, obs)
+        return self.observation
+
+
+    def reset(self, seed=None,options={}):
         """Reset the environment.
 
         Returns:
@@ -539,7 +570,7 @@ class MissileCommandEnv(gym.Env):
         self.attackers_missiles = np.tile(self.attackers_missiles, (CONFIG.ATTACKERS.MISSILES_PER_UNIT, 1))
         self.attackers_missiles[:, 0] = missiles_id
 
-        return self._extract_observation()
+        return self.state_to_dict()
 
 
     def step(self, action):
@@ -563,6 +594,7 @@ class MissileCommandEnv(gym.Env):
 
             info (dict): additional information on the current time step.
         """
+        action = self.action_dictionary.sample() ######### DEBUG
         # Reset current reward
         # ------------------------------------------
         self.reward_timestep = 0.0
@@ -644,7 +676,7 @@ class MissileCommandEnv(gym.Env):
         # confirm target is within range and alive
         in_range = \
             np.linalg.norm(all_attackers[target_id, 1:3] - self.defenders_missiles[missiles_to_launch, 1:3],
-                           axis=-1) <= attackers_range
+                           axis=-1) <= defenders_range
         alive = all_attackers[target_id, 3] > 0
         missiles_to_launch[missiles_to_launch] = in_range & alive
         target_id = target_id[in_range & alive]
@@ -668,8 +700,8 @@ class MissileCommandEnv(gym.Env):
         # terminate if out of bounds
         oob = out_of_bounds(self.attackers[:, 1:3])
         if np.any(oob):
-            # self.attackers[oob, 1:3] -= delta_pose[oob]
-            self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oob, 0])
+            num_of_destroyed = self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[oob, 0])
+            reward_bomber_destroyed = num_of_destroyed * CONFIG.REWARD.DESTROYED_BOMBER
 
         # decrement fuel
         self.attackers[:, 8] -= 1
@@ -767,8 +799,8 @@ class MissileCommandEnv(gym.Env):
                 self.defenders_missiles[defenders_hit, 5] = 0
                 attackers_hit = np.isin(self.attackers[:, 0], target_id[hits])
                 if np.any(attackers_hit):
-                    self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[attackers_hit, 0])
-                    reward_bomber_destroyed = np.sum(attackers_hit) * CONFIG.REWARD.DESTROYED_BOMBER
+                    num_of_destroyed = self.destroy_units_by_id(side="attackers", unit_ids=self.attackers[attackers_hit, 0])
+                    reward_bomber_destroyed = num_of_destroyed * CONFIG.REWARD.DESTROYED_BOMBER
                 attackers_hit = np.isin(self.attackers_missiles[:, 0], target_id[hits])
                 if np.any(attackers_hit):
                     self.attackers_missiles[attackers_hit, [3, 5]] = 0  # velocity, health = 0
@@ -821,7 +853,7 @@ class MissileCommandEnv(gym.Env):
                                reward_city_destroyed + \
                                reward_missiles_launched
         self.reward_total += self.reward_timestep
-        self.observation = self._extract_observation()
+        self.observation = self.state_to_dict()
         return self.observation, self.reward_timestep, done, {}
 
 
@@ -837,7 +869,7 @@ class MissileCommandEnv(gym.Env):
         """
         frame = None
         if not self.display:
-            pygame.init()
+            pygame.display.init()
             # pygame.mouse.set_visible(False)
             self.clock = pygame.time.Clock()
             pygame.display.set_caption("MissileCommand")
@@ -885,7 +917,10 @@ class MissileCommandEnv(gym.Env):
 
     def destroy_units_by_id(self, side, unit_ids):
         # destroy unit and unlaunched missiles
+        # return number of destroyed units(that were not previously destroyed)
+        num_of_destroyed = 0
         if side == "attackers":
+            num_of_destroyed = np.sum(self.attackers[unit_ids.astype(int), 5] > 0)
             self.attackers[unit_ids.astype(int), 3] = 0  # velocity, health = 0
             self.attackers[unit_ids.astype(int), 5] = 0
             missiles_unlaunched = self.attackers_missiles[:, 7] == 0
@@ -893,6 +928,7 @@ class MissileCommandEnv(gym.Env):
             self.attackers_missiles[missile_ids, 3] = 0  # velocity = 0
             self.attackers_missiles[missile_ids, 5] = 0  # health = 0
         elif side == "defenders":
+            num_of_destroyed = np.sum(self.defenders[unit_ids.astype(int), 5] > 0)
             self.defenders[unit_ids.astype(int), 3] = 0  # velocity, health = 0
             self.defenders[unit_ids.astype(int), 5] = 0  # velocity, health = 0
             missiles_unlaunched = self.defenders_missiles[:, 7] == 0
@@ -901,6 +937,7 @@ class MissileCommandEnv(gym.Env):
             self.defenders_missiles[missile_ids, 5] = 0  # health = 0
         else:
             print("Warning: destroy_units_by_id side should be \"attackers\" or \"defenders\"")
+        return num_of_destroyed
 
 
 if __name__ == "__main__":
