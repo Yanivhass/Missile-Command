@@ -39,7 +39,7 @@ from QNetwork import Agent, dqn, action_id_to_dict
 def show_video_of_model(agent, env, max_t=200):
     # vid = video_recorder.VideoRecorder(env, path="video/{}.mp4".format(env_name))
     recorded_frames = []
-    agent.qnetwork_local.load_state_dict(torch.load('checkpoint53000 exploration.pth'))
+    agent.qnetwork_local.load_state_dict(torch.load('checkpoint10000.pth'))
     state = env.reset()
     done = False
     for t in range(max_t):
@@ -57,7 +57,7 @@ def show_video_of_model(agent, env, max_t=200):
     clip = ImageSequenceClip(recorded_frames, fps=10)
     clip.write_videofile('final.mp4')
 
-
+    env.close()
 
 
 if __name__ == "__main__":
@@ -83,11 +83,18 @@ if __name__ == "__main__":
     state_size = env.observation_space.shape[0]
     action_size = 24  #flatten_space(env.action_dictionary["attackers"]).shape[0]
 
-
-
-    agent = Agent(state_size=state_size, action_size=action_size, seed=0)
+    BUFFER_SIZE = int(1e5)  # replay buffer size
+    BATCH_SIZE = 238  # minibatch size
+    GAMMA = 0.97408  # discount factor
+    eps_end = 0.0974
+    eps_decay = 0.96387
+    TAU = 0.018343219  # for soft update of target parameters
+    LR = 0.00024208735655065246  # learning rate
+    UPDATE_EVERY = 4  # how often to update the network
+    agent = Agent(state_size=state_size, action_size=action_size, seed=0,
+                  BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE, GAMMA=GAMMA, TAU=TAU, LR=LR,
+                  UPDATE_EVERY=UPDATE_EVERY)
     show_video_of_model(agent, env)
-    env.close()
     #
     # # While the episode is not finished
     # done = False
