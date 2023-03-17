@@ -41,7 +41,7 @@ if __name__ == "__main__":
     checkpoint_root = "tmp/ppo/"
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
-    SELECT_ENV = "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
+    SELECT_ENV = MissileCommandEnv("")  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
     N_ITER = 10
 
     config = ppo.DEFAULT_CONFIG.copy()
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     config["framework"] = "torch"
 
     # agent = ppo.PPOTrainer(config, env=SELECT_ENV)
-    print(ray.rllib.utils.check_env([MissileCommandEnv]))
+    print(ray.rllib.utils.check_env(SELECT_ENV))
     # print(ray.rllib.utils.check_gym_environments([MissileCommandEnv]))
     agent = (
         PPOConfig()

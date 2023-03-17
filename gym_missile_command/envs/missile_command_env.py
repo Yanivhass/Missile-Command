@@ -570,7 +570,7 @@ class MissileCommandEnv(gym.Env):
         self.attackers_missiles = np.tile(self.attackers_missiles, (CONFIG.ATTACKERS.MISSILES_PER_UNIT, 1))
         self.attackers_missiles[:, 0] = missiles_id
 
-        return self.state_to_dict()
+        return self.state_to_dict(), {}
 
 
     def step(self, action):
