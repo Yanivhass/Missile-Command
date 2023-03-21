@@ -7,6 +7,13 @@ from gymnasium.spaces import Box, Discrete
 from ray import air, tune
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.env.multi_agent_env import make_multi_agent
+from ray.rllib.models import ModelCatalog
+from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+
+import pettingzoo
+from pettingzoo.butterfly import pistonball_v6
+from ray.rllib.env import PettingZooEnv
+from ray.tune.registry import register_env
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -19,6 +26,7 @@ parser.add_argument("--multi-agent", action="store_true")
 parser.add_argument("--stop-iters", type=int, default=10)
 parser.add_argument("--stop-timesteps", type=int, default=10000)
 parser.add_argument("--stop-reward", type=float, default=9.0)
+
 
 
 class CustomRenderedEnv(gym.Env):
@@ -83,17 +91,37 @@ MultiAgentCustomRenderedEnv = make_multi_agent(lambda config: CustomRenderedEnv(
 if __name__ == "__main__":
     # Note: Recording and rendering in this example
     # should work for both local_mode=True|False.
+    env_name = "pistonball_v6"
+    env_creator = lambda config: pistonball_v6.env(render_mode="human")
+    # register that way to make the environment under an rllib name
+    register_env('pistonball_v6', lambda config: PettingZooEnv(env_creator(config)))
+    test_env = PettingZooEnv(env_creator({}))
+    obs_space = test_env.observation_space
+    act_space = test_env.action_space
+    ModelCatalog.register_custom_model("CNNModelV2", CNNModelV2)
+    def gen_policy(i):
+        config = {
+            'model': {
+                'custom_model': "CNNModelV2",
+            },
+            'gamma': 0.99,
+        }
+        return (None, obs_space, act_space, {})
+    policies = {'policy_0': gen_policy(0)}
+    policy_ids = list(policies.keys())
+
     ray.init(num_cpus=4)
     args = parser.parse_args()
     args.framework = "torch"
 
     # Example config switching on rendering.
-    config = (
+    '''config = (
         PPOConfig()
         # Also try common gym envs like: "CartPole-v1" or "Pendulum-v1".
         .environment(
-            MultiAgentCustomRenderedEnv if args.multi_agent else CustomRenderedEnv,
-            env_config={"corridor_length": 10, "max_steps": 100},
+            # MultiAgentCustomRenderedEnv if args.multi_agent else CustomRenderedEnv,
+            # env_config={"corridor_length": 10, "max_steps": 100},
+            "pistonball_v6"
         )
         .framework(args.framework)
         # Use a vectorized env with 2 sub-envs.
@@ -116,9 +144,9 @@ if __name__ == "__main__":
                 render_env=True,
             ),
         )
-    )
+    )'''
 
-    stop = {
+    '''stop = {
         "training_iteration": args.stop_iters,
         "timesteps_total": args.stop_timesteps,
         "episode_reward_mean": args.stop_reward,
@@ -128,4 +156,16 @@ if __name__ == "__main__":
         "PPO",
         param_space=config.to_dict(),
         run_config=air.RunConfig(stop=stop),
-    ).fit()
+    ).fit()'''
+    config = PPOConfig()
+    config = config.training(gamma=0.9, lr=0.01, kl_coeff=0.3)
+    config = config.resources(num_gpus=0)
+    config = config.rollouts(num_rollout_workers=4)
+    config.model = {
+        "conv_filters": [32,32,3],
+    }
+    config = config.framework("torch")
+    print(config.to_dict())
+    # Build a Algorithm object from the config and run 1 training iteration.
+    algo = config.build(env="pistonball_v6")
+    algo.train()
