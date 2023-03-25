@@ -32,24 +32,34 @@ parser.add_argument("--stop-iters", type=int, default=10)
 parser.add_argument("--stop-timesteps", type=int, default=10000)
 parser.add_argument("--stop-reward", type=float, default=9.0)
 
-class CNNModelV2(TorchModelV2):
+class CNNModelV2(TorchModelV2, nn.Module):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        super().__init__(obs_space, action_space, num_outputs, model_config, name)
-        self.num_outputs = int(np.product(self.obs_space.shape))
-        self.fc1 = nn.Linear(self.num_outputs, 21168)
-        self._last_batch_size = None
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs,
+                              model_config, name)
+        nn.Module.__init__(self)
 
+        self.model = nn.Sequential(
+            nn.LayerNorm([3, 457, 120]),
+            nn.Conv2d(3, 16, (8, 8), stride=(4, 4)),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, (4, 4), stride=(2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, (3, 3), stride=(1, 1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(18656, 512),
+            nn.ReLU()
+        )
+        self.policy_fn = nn.Linear(512, num_outputs)
+        self.value_fn = nn.Linear(512, 1)
     def forward(self, input_dict, state, seq_lens):
-        obs = input_dict["obs_flat"]
-        # Store last batch size for value_function output.
-        self._last_batch_size = obs.shape[0]
-        # Return 2x the obs (and empty states).
-        # This will further be sent through an automatically provided
-        # LSTM head (b/c we are setting use_lstm=True below).
-        return self.fc1(obs * 2.0), []
+        x = input_dict["obs"].float()
+        model_out = self.model(x.permute(0, 3, 1, 2))
+        self._value_out = self.value_fn(model_out)
+        return self.policy_fn(model_out), state
 
     def value_function(self):
-        return torch.from_numpy(np.zeros(shape=(self._last_batch_size,)))
+        return self._value_out.flatten()
 
 class CustomRenderedEnv(gym.Env):
     """Example of a custom env, for which you can specify rendering behavior."""
@@ -111,10 +121,12 @@ class CustomRenderedEnv(gym.Env):
 MultiAgentCustomRenderedEnv = make_multi_agent(lambda config: CustomRenderedEnv(config))
 
 if __name__ == "__main__":
+    print(torch.cuda.is_available())
+    torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Note: Recording and rendering in this example
     # should work for both local_mode=True|False.
     env_name = "pong_v3"
-    env_creator = lambda config: pong_v3.env(render_mode="human")
+    env_creator = lambda config: pistonball_v6.env(render_mode="human")
     # register that way to make the environment under an rllib name
     register_env('pong_v3', lambda config: PettingZooEnv(env_creator(config)))
     test_env = PettingZooEnv(env_creator({}))
@@ -181,14 +193,11 @@ if __name__ == "__main__":
     ).fit()'''
     config = (
         ppo.PPOConfig()
+        # alpha_zero.AlphaZeroConfig()
         .environment("pong_v3")
         .framework("torch")
         .training(
         model={
-             # Auto-wrap the custom(!) model with an LSTM.
-             "use_lstm": True,
-             # To further customize the LSTM auto-wrapper.
-             "lstm_cell_size": 64,
              # Specify our custom model from above.
              "custom_model": "CNNModelV2",
              # Extra kwargs to be passed to your model's c'tor.
