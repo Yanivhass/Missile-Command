@@ -49,6 +49,7 @@ class missile_command(AECEnv):
 
     def __init__(self, num_attackers, num_defenders, num_missiles, render_mode='human'):
         super().__init__()
+        # Set up the environment
         self.render_mode = render_mode
         self.possible_attackers = ["attacker_" + str(r) for r in range(num_attackers)]
         self.possible_defenders = ["defender_" + str(r) for r in range(num_defenders)]
@@ -62,6 +63,7 @@ class missile_command(AECEnv):
         self.missile_name_mapping = dict(
             zip(self.possible_missiles, list(range(len(self.possible_missiles))))
         )
+        # define observation space
         state_dict = gymnasium.spaces.Dict({
             "X": gymnasium.spaces.Box(-1, 1, shape=(1,)),
             "Y": gymnasium.spaces.Box(-1, 1, shape=(1,)),
@@ -77,6 +79,8 @@ class missile_command(AECEnv):
         self._action_spaces = {agent: Discrete(NUM_ACTIONS) for agent in self.possible_agents}
         self._observation_spaces = {agent: state_dict for agent in self.possible_all}
         self.render_mode = render_mode
+
+        self.reset()
 
     def observation_space(self, agent):
         return Box(-1, 1, shape=(DIM_OBS,))
@@ -96,6 +100,7 @@ class missile_command(AECEnv):
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
         self.infos = {agent: {} for agent in self.agents}
+        # define initial state for agent and missile
         self.state = {agent: INIT_STATE for agent in self.agents}
         self.observations = {agent: INIT_STATE for agent in self.agents}
         self.num_moves = 0
@@ -107,6 +112,12 @@ class missile_command(AECEnv):
 
     def step(self, action):
         # NEED TO IMPLEMENT
+
+        # Update locations of all agents + missiles according to the velocities
+
+        # Check for collisions between missiles and agents
+        # If collision, update health of agent and remove missile + add reward
+        # Check if agent (atk / def) is dead and return reward accordingly
         pass
 
 
