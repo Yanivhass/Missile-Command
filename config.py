@@ -32,9 +32,9 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 4  # number of entities
+        QUANTITY: int = 3  # number of entities
         RADIUS: int = 20
-        RANGE: int = 600
+        RANGE: int = 100
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 10
 
@@ -81,9 +81,9 @@ class CONFIG:
         Attributes:
             RADIUS (float): radius of the anti-missile battery object.
         """
-        QUANTITY: int = 1
+        QUANTITY: int = 2
         RADIUS: int = 20
-        RANGE: int = 300
+        RANGE: int = 200
         MAX_HEALTH: float = 1
         MISSILES_PER_UNIT: int = 5
         FUEL: int = 250
@@ -281,8 +281,8 @@ class CONFIG:
             ENEMEY_MISSILE_LAUNCHED (float); reward for each ennemy missile launched.
             ENNEMY_TARGET_MISSED (float); reward for each friendly missile target miss.
         """
-        DESTROYED_CITY: float = +1000.0
-        DESTROYED_AA_BATTERY: float = +100.0
+        DESTROYED_CITY: float = +100.0
+        DESTROYED_AA_BATTERY: float = +10.0
         DESTROYED_BOMBER: float = -200.0
         # DESTROYED_MISSILES: float = + 15.0
         MISSILE_LAUNCHED: float = -20.0

@@ -1,10 +1,11 @@
 """Environment usage for a machine."""
 
-import gym
+import gymnasium as gym
 
 from PIL import Image
 import numpy as np
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from gym_missile_command import MissileCommandEnv
 
 
 from config import CONFIG
@@ -15,8 +16,8 @@ if __name__ == "__main__":
 
     # Create the environment
     config = {}
-    env = gym.make("missile-command-v0",env_config={})
-
+    # env = gym.make("missile-command-v0",env_config={})
+    env = MissileCommandEnv("")
     # Reset it
     observation = env.reset()
 
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     done = False
     step = 0
 
-    while step < 200 and not done:
+    while step < 1000 and not done:
         action = env.action_space.sample()
         # Select an action (here, a random one)
         # random_action = True
@@ -47,7 +48,8 @@ if __name__ == "__main__":
             #################################################################
 
         # One step forward
-        observation, reward, done, _ = env.step(action)
+        observation, reward, done, truncated, infos = env.step(action)
+        # [obs], [reward], [terminated], [truncated], and [infos]
 
         # Render (or not) the environment
         frame = env.render(mode="rgb_array")  # "processed_observation"/"rgb_array"

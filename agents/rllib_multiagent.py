@@ -5,7 +5,6 @@ import shutil
 import sys
 import numpy as np
 from PIL import Image
-from matplotlib import pyplot as plt
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import gym
 import ray
@@ -14,45 +13,58 @@ import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
 from ray.tune.logger import pretty_print
-import torch
+from ray.rllib.env.multi_agent_env import make_multi_agent
+
 from gym_missile_command import MissileCommandEnv
-from rllib_example import CartPoleSparseRewards
 
 if __name__ == "__main__":
-    algo = "AlphaZero"  # "PPO"\"AlphaZero"
-    N_ITER = 40000
-    torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+    algo = "PPO"
+    N_ITER = 1
 
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
 
+    # algo = ppo.PPO(env=MissileCommandEnv, config={
+    #     "env_config": {},  # config to pass to env class
+    # }).framework(framework="torch")
+    # print(algo.train())
     checkpoint_root = "tmp/ppo/"
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
-    SELECT_ENV = MissileCommandEnv # MissileCommandEnv("")  # "missile-command-v0"   # "Taxi-v3" "CartPole-v1"
-    SELECT_ENV = CartPoleSparseRewards
-    # print(ray.rllib.utils.check_env(SELECT_ENV))
 
-    if algo == "PPO":
+    MA_MissileCommandEnv = make_multi_agent(lambda config: MissileCommandEnv(""))
+    SELECTED_ENV = MA_MissileCommandEnv({"num_agents": 2})  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
+
+
+    # config = ppo.DEFAULT_CONFIG.copy()
+    # config["log_level"] = "WARN"
+    # config["framework"] = "torch"
+
+    # agent = ppo.PPOTrainer(config, env=SELECT_ENV)
+    # config.environment(disable_env_checking=True)
+    print(ray.rllib.utils.check_env(SELECTED_ENV))
+    # print(ray.rllib.utils.check_gym_environments([MissileCommandEnv]))
+    if algo is "PPO":
         agent = (
             PPOConfig()
                 .framework(framework="torch")
-                .rollouts(num_rollout_workers=10,num_envs_per_worker=4)
-                .resources(num_gpus=1)
-                .environment(env=SELECT_ENV, env_config={})
+                .rollouts(num_rollout_workers=1)
+                .resources(num_gpus=0)
+                .environment(env=MA_MissileCommandEnv, env_config={"num_agents": 2})
                 .build()
         )
-    if algo == "AlphaZero":
+    if algo is "AlphaZero":
         config = AlphaZeroConfig()
         config = config.training(sgd_minibatch_size=256)
         config = config.resources(num_gpus=1)
-        config = config.rollouts(num_rollout_workers=0)
+        config = config.rollouts(num_rollout_workers=4)
         print(config.to_dict())
         # Build a Algorithm object from the config and run 1 training iteration.
-        agent = config.build(env=SELECT_ENV)
+        agent = config.build(env=MissileCommandEnv)
 
     results = []
     episode_data = []
     episode_json = []
+
     for n in range(N_ITER):
         result = agent.train()
         results.append(result)
@@ -64,6 +76,7 @@ if __name__ == "__main__":
             "episode_reward_max": result["episode_reward_max"],
             "episode_len_mean": result["episode_len_mean"],
         }
+
         episode_data.append(episode)
         episode_json.append(json.dumps(episode))
         file_name = agent.save(checkpoint_root)
@@ -75,32 +88,8 @@ if __name__ == "__main__":
             f'len mean: {result["episode_len_mean"]:8.4f}. '
             f'Checkpoint saved to {file_name}'
         )
-        if n % 100 == 0:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])
-            ax.plot(np.arange(len(episode_data)), [d["episode_reward_mean"] for d in episode_data])
-            ax.plot(np.arange(len(episode_data)), [d["episode_reward_max"] for d in episode_data])
-            ax.legend(['Min reward', 'Average reward', 'Max reward'])
-            plt.ylabel('Score')
-            plt.xlabel('Episode #')
-            plt.savefig(f"../Results/training scores{n}.png")
-            plt.show()
-            agent.save()
 
-
-    # import pprint
-    # plot the scores
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])
-    ax.plot(np.arange(len(episode_data)), [d["episode_reward_mean"] for d in episode_data])
-    ax.plot(np.arange(len(episode_data)), [d["episode_reward_max"] for d in episode_data])
-    ax.legend(['Min reward', 'Average reward', 'Max reward'])
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
-    plt.savefig("../Results/training scores.png")
-    plt.show()
+    import pprint
 
     policy = agent.get_policy()
     model = policy.model
@@ -159,7 +148,7 @@ if __name__ == "__main__":
     # env = gym.make("missile-command-v0", env_config={})
     recorded_frames = []
 
-    env = MissileCommandEnv("")
+    env = SELECTED_ENV #MissileCommandEnv("")
     for i in range(10):
         try:
             episode_reward = 0
