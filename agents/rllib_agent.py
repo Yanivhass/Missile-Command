@@ -18,6 +18,7 @@ import torch
 from gym_missile_command import MissileCommandEnv
 from rllib_example import CartPoleSparseRewards
 
+
 if __name__ == "__main__":
     algo = "AlphaZero"  # "PPO"\"AlphaZero"
     N_ITER = 40000
@@ -33,19 +34,36 @@ if __name__ == "__main__":
     # print(ray.rllib.utils.check_env(SELECT_ENV))
 
     if algo == "PPO":
-        agent = (
+        config = PPOConfig()
+        config = config.training(sgd_minibatch_size=256,
+                                 entropy_coeff=0.001)
+        config = config.resources(num_gpus=1)
+        config = config.rollouts(num_rollout_workers=10)
+        config = config.framework(framework="torch")
+        '''explore_config = config.exploration_config.update(
+            {"type": "EpsilonGreedy",
+             "initial_epsilon": 0.96,
+             "final_epsilon": 0.01,
+             "epsilon_timesteps": 5000}
+            )
+        config = config.exploration(exploration_config=explore_config)'''
+        print(config.to_dict())
+        # Build a Algorithm object from the config and run 1 training iteration.
+        agent = config.build(env=SELECT_ENV)
+        '''agent = (
             PPOConfig()
                 .framework(framework="torch")
                 .rollouts(num_rollout_workers=10,num_envs_per_worker=4)
                 .resources(num_gpus=1)
                 .environment(env=SELECT_ENV, env_config={})
                 .build()
-        )
+        )'''
     if algo == "AlphaZero":
         config = AlphaZeroConfig()
+        config = config.framework(framework="torch")
         config = config.training(sgd_minibatch_size=256)
         config = config.resources(num_gpus=1)
-        config = config.rollouts(num_rollout_workers=0)
+        config = config.rollouts(num_rollout_workers=6)
         print(config.to_dict())
         # Build a Algorithm object from the config and run 1 training iteration.
         agent = config.build(env=SELECT_ENV)
@@ -84,7 +102,7 @@ if __name__ == "__main__":
             ax.legend(['Min reward', 'Average reward', 'Max reward'])
             plt.ylabel('Score')
             plt.xlabel('Episode #')
-            plt.savefig(f"../Results/training scores{n}.png")
+            # plt.savefig(f"../Results/training scores{n}.png")
             plt.show()
             agent.save()
 
@@ -99,7 +117,7 @@ if __name__ == "__main__":
     ax.legend(['Min reward', 'Average reward', 'Max reward'])
     plt.ylabel('Score')
     plt.xlabel('Episode #')
-    plt.savefig("../Results/training scores.png")
+    # plt.savefig("../Results/training scores.png")
     plt.show()
 
     policy = agent.get_policy()
@@ -176,7 +194,7 @@ if __name__ == "__main__":
                 episode_reward += reward
 
             clip = ImageSequenceClip(recorded_frames, fps=10)
-            clip.write_videofile(f'../Results/captRllib_MA{i}.mp4')
+            # clip.write_videofile(f'../Results/captRllib_MA{i}.mp4')
         except Exception as e:
             print(e)
     ray.shutdown()  # "Undo ray.init()".
