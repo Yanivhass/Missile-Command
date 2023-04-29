@@ -13,7 +13,6 @@ import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
-from ray.rllib.algorithms.algorithm import Algorithm
 from ray.tune.logger import pretty_print
 import torch
 from gym_missile_command import MissileCommandEnv
@@ -37,47 +36,39 @@ if __name__ == "__main__":
     # print(ray.rllib.utils.check_env(SELECT_ENV))
 
     if algo == "PPO":
-        # Best performing trial's final set of hyperparameters:
-        hp = {'clip_param': 0.2,
-         'lambda': 0.95,
-         'lr': 0.0001,
-         'num_sgd_iter': 20,
-         'sgd_minibatch_size': 2048,
-         'train_batch_size': 20000}
-        if load_checkpoint:
-            agent = Algorithm.from_checkpoint(path_to_checkpoint)\
-            # agent\
-                .framework(framework="torch")
-                .rollouts(num_rollout_workers=4, num_envs_per_worker=4)  # for training: 4,4
-                .resources(num_gpus=1)
-                .environment(env=SELECT_ENV, env_config={})\
-                .build()
-        else:
-            agent = (
-                PPOConfig()
-                    # .training(lambda_=hp['lambda'],
-                    #           lr=hp['lr'],
-                    #           num_sgd_iter=hp['num_sgd_iter'],
-                    #           sgd_minibatch_size=hp['sgd_minibatch_size'],
-                    #           train_batch_size=hp['train_batch_size'])
-                    .framework(framework="torch")
-                    .rollouts(num_rollout_workers=4, num_envs_per_worker=4)  # for training: 4,4
-                    .resources(num_gpus=1)
-                    .environment(env=SELECT_ENV, env_config={})
-                    .build()
-            )
-
-
-    if algo == "AlphaZero":
-        config = AlphaZeroConfig()
-        config = config.training(sgd_minibatch_size=256)
+        config = PPOConfig()
+        config = config.training(sgd_minibatch_size=256,
+                                 entropy_coeff=0.001)
         config = config.resources(num_gpus=1)
-        config = config.rollouts(num_rollout_workers=0)
+        config = config.rollouts(num_rollout_workers=10)
+        config = config.framework(framework="torch")
+        '''explore_config = config.exploration_config.update(
+            {"type": "EpsilonGreedy",
+             "initial_epsilon": 0.96,
+             "final_epsilon": 0.01,
+             "epsilon_timesteps": 5000}
+            )
+        config = config.exploration(exploration_config=explore_config)'''
         print(config.to_dict())
         # Build a Algorithm object from the config and run 1 training iteration.
         agent = config.build(env=SELECT_ENV)
-
-
+        '''agent = (
+            PPOConfig()
+                .framework(framework="torch")
+                .rollouts(num_rollout_workers=10,num_envs_per_worker=4)
+                .resources(num_gpus=1)
+                .environment(env=SELECT_ENV, env_config={})
+                .build()
+        )'''
+    if algo == "AlphaZero":
+        config = AlphaZeroConfig()
+        config = config.framework(framework="torch")
+        config = config.training(sgd_minibatch_size=256)
+        config = config.resources(num_gpus=1)
+        config = config.rollouts(num_rollout_workers=6)
+        print(config.to_dict())
+        # Build a Algorithm object from the config and run 1 training iteration.
+        agent = config.build(env=SELECT_ENV)
 
     results = []
     episode_data = []
