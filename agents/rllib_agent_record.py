@@ -17,15 +17,16 @@ from gym_missile_command import MissileCommandEnv
 
 if __name__ == "__main__":
 
-    path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
-                         "PPO_MissileCommandEnv_2023-04-22_11-02-06ixkp89c_\checkpoint_000701"
+    # path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
+    #                      "PPO_MissileCommandEnv_2023-04-25_10-35-48t75km3zm/checkpoint_000301"
+    path_to_checkpoint = "C:/Projects/Missile-Command/agents/tmp/ppo/checkpoint_002209"
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
     # checkpoint_root = "tmp/ppo/"
     # shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
     SELECT_ENV = MissileCommandEnv("")  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
-    N_ITER = 10
+    N_Episodes = 10
 
     config = ppo.DEFAULT_CONFIG.copy()
     config["log_level"] = "WARN"
@@ -40,12 +41,12 @@ if __name__ == "__main__":
             .environment(env=MissileCommandEnv, env_config={})
             .build()
     )
-    # agent.restore(path_to_checkpoint)
+    agent.restore(path_to_checkpoint)
 
 
 
     env = MissileCommandEnv("")
-    for i in range(10):
+    for i in range(N_Episodes):
         recorded_frames = []
         try:
             episode_reward = 0
@@ -61,8 +62,8 @@ if __name__ == "__main__":
                 obs, reward, done, truncated, info = env.step(action)
                 episode_reward += reward
 
-            # clip = ImageSequenceClip(recorded_frames, fps=10)
-            # clip.write_videofile(f'../Results/captRllib{i}.mp4')
+            clip = ImageSequenceClip(recorded_frames, fps=10)
+            clip.write_videofile(f'../Results/captRllib{i}.mp4')
         except Exception as e:
             print(e)
     ray.shutdown()  # "Undo ray.init()".

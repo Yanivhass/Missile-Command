@@ -198,7 +198,7 @@ class MissileCommandEnv(gym.Env):
 
         self.single_action = np.array(np.meshgrid(movements, targets, fire)).T.reshape(-1,3)  # all combinations for single agent action
         all_actions = np.tile(np.arange(self.single_action.shape[0]), (attackers_count, 1))
-        self.multi_action = np.array(np.meshgrid(*all_actions)).T.reshape(-1,2)  # all combinations for multi agents
+        self.multi_action = np.array(np.meshgrid(*all_actions)).T.reshape(-1,attackers_count)  # all combinations for multi agents
 
         self.action_space = spaces.Discrete(self.multi_action.shape[0])
         if self.mask_actions:
@@ -970,7 +970,18 @@ class MissileCommandEnv(gym.Env):
 
         # Calculate rewards
         # ------------------------------------------
-        cities_reward = 0
+        reward_dist_to_target = 0
+        # reward minimal distance between all attackers and all targets
+        alive_targets = self.cities[:, 3] > 0
+        alive_attackers = self.attackers[:, 5] > 0
+        if np.any(alive_targets) & np.any(alive_attackers):
+            dist_to_target = np.linalg.norm(self.cities[alive_targets,1:3] - self.attackers[alive_attackers,1:3], axis=-1)
+            reward_dist_to_target += np.exp(-np.min(dist_to_target))
+        # penalize minimal distance between all attackers and all missiles
+        # launched = (self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0)
+        # if np.any(launched) & np.any(alive_attackers):
+        #     dist_to_target = np.linalg.norm(self.defenders_missiles[launched,1:3] - self.attackers[alive_attackers,1:3], axis=-1)
+        #     reward_dist_to_target -= np.exp(-np.min(dist_to_target))
 
         # Check if episode is finished
         # ------------------------------------------
@@ -990,9 +1001,10 @@ class MissileCommandEnv(gym.Env):
         # self.reward_total += friendly_battery_reward + enemy_battery_reward + cities_reward + self.reward_timestep
 
         self.reward_timestep += reward_battery_destroyed
-        # self.reward_timestep += reward_bomber_destroyed
+        self.reward_timestep += reward_bomber_destroyed
         self.reward_timestep += reward_city_destroyed
-        # self.reward_timestep += reward_missiles_launched
+        self.reward_timestep += reward_missiles_launched
+        self.reward_timestep += reward_dist_to_target
 
         self.reward_total += self.reward_timestep
         self.observation = self.state_to_dict()
