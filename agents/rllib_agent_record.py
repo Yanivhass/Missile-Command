@@ -10,8 +10,11 @@ import gym
 import ray
 # from ray.rllib.algorithms import ppo
 import ray.rllib.agents.ppo as ppo
+from ray.rllib.algorithms import alpha_zero
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.logger import pretty_print
+from ray.tune.registry import register_env
+from ray.rllib.models.catalog import ModelCatalog
 
 from gym_missile_command import MissileCommandEnv
 
@@ -19,12 +22,14 @@ if __name__ == "__main__":
 
     path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
                          "PPO_MissileCommandEnv_2023-04-22_11-02-06ixkp89c_\checkpoint_000701"
+    path_to_checkpoint = "tmp/ppo/checkpoint_000052"
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
     # checkpoint_root = "tmp/ppo/"
     # shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
     SELECT_ENV = MissileCommandEnv("")  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
+    register_env('MissileCommand', lambda config: MissileCommandEnv(config))
     N_ITER = 10
 
     config = ppo.DEFAULT_CONFIG.copy()

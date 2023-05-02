@@ -15,7 +15,7 @@ from ray.tune.logger import pretty_print
 import torch
 from gym_missile_command.envs.missile_command_env import MissileCommandEnv
 from rllib_example import CartPoleSparseRewards
-from ray.rllib.algorithms.alpha_zero.models.custom_torch_models import DenseModel
+from ray.rllib.algorithms.alpha_zero.models.custom_torch_models import ConvNetModel, DenseModel, ActorCriticModel
 from ray.tune.registry import register_env
 from ray.rllib.models.catalog import ModelCatalog
 
@@ -24,18 +24,19 @@ if __name__ == "__main__":
     N_ITER = 40000
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
     info = ray.init(ignore_reinit_error=True)
-    print(info)
-    print("Dashboard URL: http://{}".format(info.address_info["webui_url"]))
-    checkpoint_root = "/tmp/ppo/"
+    """print(info)
+    print("Dashboard URL: http://{}".format(info.address_info["webui_url"]))"""
+    checkpoint_root = "/tmp/alphazero/"
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
-    register_env('MissileCommand', lambda config: CartPoleSparseRewards(config))
+    register_env('MissileCommand', lambda config: MissileCommandEnv(config))
     ModelCatalog.register_custom_model("dense_model", DenseModel)
+    ModelCatalog.register_custom_model("convnet_model", ConvNetModel)
+    ModelCatalog.register_custom_model("actor_critic_model", ActorCriticModel)
     config = alpha_zero.AlphaZeroConfig()
     config = config.framework(framework="torch")
+    config = config.resources(num_gpus=0)
     config = config.training(
-        sgd_minibatch_size=64,
         lr=0.0001,
-        num_sgd_iter=1,
         ranked_rewards={
             "enable": True,
         },
@@ -49,7 +50,11 @@ if __name__ == "__main__":
             'add_dirichlet_noise': True,
         },
         model={
-            "custom_model": "dense_model",
+            "custom_model": "convnet_model",
+            "custom_model_config": {
+                "in_channels": 3,
+                "feature_dim": 256,
+            }
         },
     )
     print(config.to_dict())
@@ -80,7 +85,7 @@ if __name__ == "__main__":
             f'len mean: {result["episode_len_mean"]:8.4f}. '
             f'Checkpoint saved to {file_name}'
         )
-        if n % 100 == 0:
+        if n % 50 == 0:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])
