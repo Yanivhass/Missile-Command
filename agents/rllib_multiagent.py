@@ -9,16 +9,20 @@ from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import gym
 import ray
 # from ray.rllib.algorithms import ppo
-import ray.rllib.agents.ppo as ppo
+# import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
 from ray.tune.logger import pretty_print
 from ray.rllib.env.multi_agent_env import make_multi_agent
+from ray.tune.registry import get_trainable_cls
+from ray.rllib.algorithms.qmix import QMixConfig
+from ray.rllib.env.env_context import EnvContext
 
 from gym_missile_command import MissileCommandEnv
+from gym_missile_command import MissileCommandEnv_MA,MissileCommandEnv_MAGroupedAgents
 
 if __name__ == "__main__":
-    algo = "PPO"
+    algo = "QMIX"
     N_ITER = 1
 
     info = ray.init(ignore_reinit_error=True)
@@ -28,12 +32,11 @@ if __name__ == "__main__":
     #     "env_config": {},  # config to pass to env class
     # }).framework(framework="torch")
     # print(algo.train())
-    checkpoint_root = "tmp/ppo/"
+    checkpoint_root = f"tmp/{algo}/"
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
-    MA_MissileCommandEnv = make_multi_agent(lambda config: MissileCommandEnv(""))
-    SELECTED_ENV = MA_MissileCommandEnv({"num_agents": 2})  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
-
+    # MA_MissileCommandEnv = make_multi_agent(lambda config: MissileCommandEnv(""))
+    SELECTED_ENV = MissileCommandEnv_MAGroupedAgents#(env_config=EnvContext())
 
     # config = ppo.DEFAULT_CONFIG.copy()
     # config["log_level"] = "WARN"
@@ -41,7 +44,7 @@ if __name__ == "__main__":
 
     # agent = ppo.PPOTrainer(config, env=SELECT_ENV)
     # config.environment(disable_env_checking=True)
-    print(ray.rllib.utils.check_env(SELECTED_ENV))
+    # print(ray.rllib.utils.check_env(SELECTED_ENV))
     # print(ray.rllib.utils.check_gym_environments([MissileCommandEnv]))
     if algo is "PPO":
         agent = (
@@ -49,17 +52,37 @@ if __name__ == "__main__":
                 .framework(framework="torch")
                 .rollouts(num_rollout_workers=1)
                 .resources(num_gpus=0)
-                .environment(env=MA_MissileCommandEnv, env_config={"num_agents": 2})
+                .environment(env=SELECTED_ENV, env_config={"num_agents": 2})
                 .build()
         )
-    if algo is "AlphaZero":
-        config = AlphaZeroConfig()
-        config = config.training(sgd_minibatch_size=256)
+    if algo is "QMIX":
+        # config = (
+        #     get_trainable_cls(algo)
+        #         .get_default_config()
+        #         .environment(MA_MissileCommandEnv)
+        #         .framework("torch")
+        #         # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
+        #         .resources(num_gpus=1)
+        # )
+        #
+        # config.framework("torch")\
+        #     .training(mixer="qmix", train_batch_size=32)\
+        #     .rollouts(num_rollout_workers=0, rollout_fragment_length=4)\
+        #     .exploration(
+        #     exploration_config={
+        #         "final_epsilon": 0.0,
+        #     })\
+        #     .environment(
+        #         env=MA_MissileCommandEnv
+        #     )
+        config = QMixConfig()
+        # config = config.training(gamma=0.9, lr=0.01, kl_coeff=0.3)
         config = config.resources(num_gpus=1)
-        config = config.rollouts(num_rollout_workers=4)
+        config = config.rollouts(num_rollout_workers=0)
         print(config.to_dict())
-        # Build a Algorithm object from the config and run 1 training iteration.
-        agent = config.build(env=MissileCommandEnv)
+        # Build an Algorithm object from the config and run 1 training iteration.
+        # algo = config.build(env=MissileCommandEnv_MA)
+        agent = config.build(env=SELECTED_ENV)
 
     results = []
     episode_data = []

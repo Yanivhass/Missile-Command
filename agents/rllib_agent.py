@@ -10,7 +10,6 @@ from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import gym
 import ray
 # from ray.rllib.algorithms import ppo
-import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
 from ray.tune.logger import pretty_print
