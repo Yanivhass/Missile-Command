@@ -17,16 +17,18 @@ from ray.rllib.env.multi_agent_env import make_multi_agent
 from ray.tune.registry import get_trainable_cls
 from ray.rllib.algorithms.qmix import QMixConfig
 from ray.rllib.env.env_context import EnvContext
+from ray.rllib.algorithms.maddpg.maddpg import MADDPGConfig
+from ray.rllib.examples.env.two_step_game import TwoStepGame, TwoStepGameWithGroupedAgents
+from ray.tune import register_env
 
-from gym_missile_command import MissileCommandEnv
-from gym_missile_command import MissileCommandEnv_MA,MissileCommandEnv_MAGroupedAgents
+from gym_missile_command import MissileCommandEnv_MA, MissileCommandEnv_MAGroupedAgents
 
 if __name__ == "__main__":
-    algo = "QMIX"
+    algo = "MADDPG"
     N_ITER = 1
 
     info = ray.init(ignore_reinit_error=True)
-    print("Dashboard URL: http://{}".format(info["webui_url"]))
+    print("Dashboard URL: http://{}".format(info.address_info["webui_url"]))
 
     # algo = ppo.PPO(env=MissileCommandEnv, config={
     #     "env_config": {},  # config to pass to env class
@@ -36,7 +38,11 @@ if __name__ == "__main__":
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
     # MA_MissileCommandEnv = make_multi_agent(lambda config: MissileCommandEnv(""))
-    SELECTED_ENV = MissileCommandEnv_MAGroupedAgents#(env_config=EnvContext())
+    register_env(
+        "MA_MissileCommandEnv",
+        lambda config: MissileCommandEnv_MAGroupedAgents(config)
+    )
+    SELECTED_ENV = "MA_MissileCommandEnv"#(env_config=EnvContext())
 
     # config = ppo.DEFAULT_CONFIG.copy()
     # config["log_level"] = "WARN"
@@ -55,6 +61,28 @@ if __name__ == "__main__":
                 .environment(env=SELECTED_ENV, env_config={"num_agents": 2})
                 .build()
         )
+    if algo == "MADDPG":
+        config = MADDPGConfig()
+        config = config.resources(num_gpus=1)
+        config = config.framework(framework="torch")
+        replay_config = config.replay_buffer_config.update(
+
+            {
+
+                "capacity": 100000,
+
+                "prioritized_replay_alpha": 0.8,
+
+                "prioritized_replay_beta": 0.45,
+
+                "prioritized_replay_eps": 2e-6,
+
+            }
+
+        )
+        config.training(replay_buffer_config=replay_config)
+        config.environment(env=SELECTED_ENV)
+        agent = config.build(env=SELECTED_ENV)
     if algo == "QMIX":
         # config = (
         #     get_trainable_cls(algo)
@@ -79,7 +107,12 @@ if __name__ == "__main__":
         # config = config.training(gamma=0.9, lr=0.01, kl_coeff=0.3)
         config = config.resources(num_gpus=1)
         config = config.rollouts(num_rollout_workers=0)
-        config = config.environment(env=SELECTED_ENV)
+        config = config.environment(env=SELECTED_ENV,
+                                    env_config={
+                                        "separate_state_space": True,
+                                        "one_hot_state_encoding": True,
+                                    },
+                                    )
         print(config.to_dict())
         # Build an Algorithm object from the config and run 1 training iteration.
         # algo = config.build(env=MissileCommandEnv_MA)
