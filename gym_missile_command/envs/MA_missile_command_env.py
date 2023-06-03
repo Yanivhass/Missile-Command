@@ -28,7 +28,8 @@ import ray
 from ray import air, tune
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.env.multi_agent_env import MultiAgentEnv, ENV_STATE
-
+from ray.tune.registry import register_env
+from gym.envs.registration import register
 
 def out_of_bounds(points):
     below = points[:, 1] < 0
@@ -214,7 +215,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         pose_boxmax = np.array([CONFIG.WIDTH+buffer, CONFIG.HEIGHT+buffer, 100, 360])
 
         # self.observation_dictionary = \
-        self.observation_space = \
+        self.observation_dictionary = \
             spaces.Dict(
                 {
                     # state-space for the attacking team bombers
@@ -309,11 +310,102 @@ class MissileCommandEnv_MA(MultiAgentEnv):
 
                 })
 
-        self.observation_dictionary = self.observation_space
 
         self.observation_space = spaces.Dict(
             {
-                "obs": self.observation_space
+                "obs": spaces.Dict(
+                {
+                    # state-space for the attacking team bombers
+                    'attackers': spaces.Dict({
+                        'pose': spaces.Box(
+                            low=np.tile(pose_boxmin[0:2], (self.attackers_count, 1)),
+                            high=np.tile(pose_boxmax[0:2], (self.attackers_count, 1)),
+                            shape=(self.attackers_count, 2)),
+                        'velocity': spaces.Box(
+                            low=np.tile(pose_boxmin[2], (self.attackers_count, 1)),
+                            high=np.tile(pose_boxmax[2], (self.attackers_count, 1)),
+                            shape=(self.attackers_count, 1)),
+                        'direction': spaces.Box(
+                            low=np.tile(pose_boxmin[3], (self.attackers_count, 1)),
+                            high=np.tile(pose_boxmax[3], (self.attackers_count, 1)),
+                            shape=(self.attackers_count, 1)),
+                        'health': spaces.Box(0, 1, shape=(self.attackers_count, 1)),
+                        'fuel': spaces.Box(low=0, high=np.inf, shape=(self.attackers_count, 1)),
+                        'missiles': spaces.Dict({
+                            # 0 - Ready, 1 - Launched
+                            'launched': spaces.MultiBinary(attackers_missile_count),
+                            # Each missile's target is the entity number
+                            'target': spaces.MultiDiscrete(
+                                np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
+                            # pose is [x,y,z,heading angle]
+                            'pose': spaces.Box(
+                                low=np.tile(pose_boxmin[0:2], (attackers_missile_count, 1)),
+                                high=np.tile(pose_boxmax[0:2], (attackers_missile_count, 1)),
+                                shape=(attackers_missile_count, 2)),
+                            'velocity': spaces.Box(
+                                low=np.tile(pose_boxmin[2], (attackers_missile_count, 1)),
+                                high=np.tile(pose_boxmax[2], (attackers_missile_count, 1)),
+                                shape=(attackers_missile_count, 1)),
+                            'direction': spaces.Box(
+                                low=np.tile(pose_boxmin[3], (attackers_missile_count, 1)),
+                                high=np.tile(pose_boxmax[3], (attackers_missile_count, 1)),
+                                shape=(attackers_missile_count, 1)),
+                            # Missiles health is binary
+                            'health': spaces.MultiBinary(attackers_missile_count),
+                            'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1))
+                        })
+
+                    }),
+                    'defenders': spaces.Dict({
+                        'pose': spaces.Box(
+                            low=np.tile(pose_boxmin[0:2], (defenders_count, 1)),
+                            high=np.tile(pose_boxmax[0:2], (defenders_count, 1)),
+                            shape=(defenders_count, 2)),
+                        'velocity': spaces.Box(
+                            low=np.tile(pose_boxmin[2], (defenders_count, 1)),
+                            high=np.tile(pose_boxmax[2], (defenders_count, 1)),
+                            shape=(defenders_count, 1)),
+                        'direction': spaces.Box(
+                            low=np.tile(pose_boxmin[3], (defenders_count, 1)),
+                            high=np.tile(pose_boxmax[3], (defenders_count, 1)),
+                            shape=(defenders_count, 1)),
+                        # pose holds the position of each battery
+                        'health': spaces.Box(0, 1, shape=(defenders_count, 1)),
+                        # health - the hp each battery has
+                        'missiles': spaces.Dict({
+                            # 0 - Ready, 1 - Launched
+                            'launched': spaces.MultiBinary(defenders_missile_count),
+                            # Each missile's target is the entity number
+                            'target': spaces.MultiDiscrete(
+                                np.ones((1, defenders_missile_count)) * (self.attackers_count + attackers_missile_count)),
+                            # pose is [x,y,velocity,heading angle]
+                            'pose': spaces.Box(
+                                low=np.tile(pose_boxmin[0:2], (defenders_missile_count, 1)),
+                                high=np.tile(pose_boxmax[0:2], (defenders_missile_count, 1)),
+                                shape=(defenders_missile_count, 2)),
+                            'velocity': spaces.Box(
+                                low=np.tile(pose_boxmin[2], (defenders_missile_count, 1)),
+                                high=np.tile(pose_boxmax[2], (defenders_missile_count, 1)),
+                                shape=(defenders_missile_count, 1)),
+                            'direction': spaces.Box(
+                                low=np.tile(pose_boxmin[3], (defenders_missile_count, 1)),
+                                high=np.tile(pose_boxmax[3], (defenders_missile_count, 1)),
+                                shape=(defenders_missile_count, 1)),
+                            # Missiles health is binary
+                            'health': spaces.MultiBinary(defenders_missile_count),
+                            'fuel': spaces.Box(low=0, high=np.inf, shape=(defenders_missile_count, 1))
+                        }),
+                    }),
+                    'cities': spaces.Dict({
+                        'pose': spaces.Box(
+                            low=np.tile(pose_boxmin[0:2], (cities_count, 1)),
+                            high=np.tile(pose_boxmax[0:2], (cities_count, 1)),
+                            shape=(cities_count, 2)),
+                        'health': spaces.Box(0, 1, shape=(cities_count, 1)),
+                    })
+
+
+                })
             }
         )
         # if self.flat_obs:
@@ -522,6 +614,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
             full_obs[i] = {"obs": np.concatenate([obs, [i+1]])}
         # self.observation = full_obs
         self.observation = obs
+        self.observation_space = full_obs
         return full_obs
 
     def dict_to_state(self, obs):
@@ -584,13 +677,13 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         if self.flat_obs:
             obs = flatten(self.observation_dictionary, obs).astype('float32')
         self.observation = self.observation_space.sample()
-        if self.mask_actions:
-            self.observation["observations"] = obs
-            self.observation["action_mask"] = np.ones((self.action_space.n,)).astype('float32')
-        else:
-            self.observation = obs
+        # if self.mask_actions:
+        #     self.observation["observations"] = obs
+        #     self.observation["action_mask"] = np.ones((self.action_space.n,)).astype('float32')
+        # else:
+        #     self.observation = obs
         # self.observation = obs
-        return self.observation
+        return self.observation_space.sample()
 
     def action_to_dict(self,action):
         obs = self.action_dictionary.sample()
@@ -614,7 +707,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         else:
             self.observation = obs
 
-        return self.observation
+        return obs
 
 
     def reset(self, seed=None,options={}):
@@ -711,7 +804,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         self.attackers_missiles[:, 0] = missiles_id
 
         self.observation = self.state_to_dict()
-        return self.observation, {}
+        return self.observation_space, {}
 
 
     def step(self, action_i):
@@ -1135,8 +1228,14 @@ class MissileCommandEnv_MAGroupedAgents(MultiAgentEnv):
     def step(self, actions):
         return self.env.step(actions)
 
+
+def env_creator(env_config):
+    return MissileCommandEnv_MAGroupedAgents(env_config)
+
+
 if __name__ == "__main__":
     # Create the environment
+    register_env("missile-command", env_creator)
     env = gym.make("gym_missile_command:missile-command-v0")
 
     # Reset it
