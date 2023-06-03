@@ -1209,8 +1209,8 @@ class MissileCommandEnv_MAGroupedAgents(MultiAgentEnv):
     def __init__(self, env_config):
         super().__init__()
         env = MissileCommandEnv_MA(env_config)
-        tuple_obs_space = Tuple([env.observation_space, env.observation_space])
-        tuple_act_space = Tuple([env.action_space, env.action_space])
+        tuple_obs_space = env.observation_space
+        tuple_act_space = env.action_space
 
         self.env = env.with_agent_groups(
             groups={"agents": [0, 1]},

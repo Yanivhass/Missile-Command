@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # config.environment(disable_env_checking=True)
     # print(ray.rllib.utils.check_env(SELECTED_ENV))
     # print(ray.rllib.utils.check_gym_environments([MissileCommandEnv]))
-    if algo is "PPO":
+    if algo == "PPO":
         agent = (
             PPOConfig()
                 .framework(framework="torch")
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                 .environment(env=SELECTED_ENV, env_config={"num_agents": 2})
                 .build()
         )
-    if algo is "QMIX":
+    if algo == "QMIX":
         # config = (
         #     get_trainable_cls(algo)
         #         .get_default_config()
@@ -79,6 +79,7 @@ if __name__ == "__main__":
         # config = config.training(gamma=0.9, lr=0.01, kl_coeff=0.3)
         config = config.resources(num_gpus=1)
         config = config.rollouts(num_rollout_workers=0)
+        config = config.environment(env=SELECTED_ENV)
         print(config.to_dict())
         # Build an Algorithm object from the config and run 1 training iteration.
         # algo = config.build(env=MissileCommandEnv_MA)
