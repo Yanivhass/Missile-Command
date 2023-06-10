@@ -1,30 +1,23 @@
 # import pandas as pd
 import json
-import os
 import shutil
-import sys
+
 import numpy as np
+# import gym
+import ray
 from PIL import Image
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-import gym
-import ray
+from ray.rllib.algorithms.maddpg.maddpg import MADDPGConfig
 # from ray.rllib.algorithms import ppo
 # import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
-from ray.tune.logger import pretty_print
-from ray.rllib.env.multi_agent_env import make_multi_agent
-from ray.tune.registry import get_trainable_cls
 from ray.rllib.algorithms.qmix import QMixConfig
-from ray.rllib.env.env_context import EnvContext
-from ray.rllib.algorithms.maddpg.maddpg import MADDPGConfig
-from ray.rllib.examples.env.two_step_game import TwoStepGame, TwoStepGameWithGroupedAgents
 from ray.tune import register_env
 
-from gym_missile_command import MissileCommandEnv_MA, MissileCommandEnv_MAGroupedAgents
+from gym_missile_command import MissileCommandEnv_MAGroupedAgents
 
 if __name__ == "__main__":
-    algo = "MADDPG"
+    algo = "QMIX"
     N_ITER = 1
 
     info = ray.init(ignore_reinit_error=True)
@@ -110,11 +103,11 @@ if __name__ == "__main__":
         config = config.environment(env=SELECTED_ENV,
                                     env_config={
                                         "separate_state_space": True,
-                                        "one_hot_state_encoding": True,
+                                        "one_hot_state_encoding": False,
                                     },
+                                    disable_env_checking=True
                                     )
-        print(config.to_dict())
-        # Build an Algorithm object from the config and run 1 training iteration.
+        # config.environment(disable_env_checking=True)
         # algo = config.build(env=MissileCommandEnv_MA)
         agent = config.build(env=SELECTED_ENV)
 
@@ -145,8 +138,6 @@ if __name__ == "__main__":
             f'len mean: {result["episode_len_mean"]:8.4f}. '
             f'Checkpoint saved to {file_name}'
         )
-
-    import pprint
 
     policy = agent.get_policy()
     model = policy.model
