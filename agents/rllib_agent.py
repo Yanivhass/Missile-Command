@@ -18,7 +18,7 @@ from gym_missile_command import MissileCommandEnv
 from rllib_example import CartPoleSparseRewards
 
 if __name__ == "__main__":
-    load_checkpoint = True
+    load_checkpoint = False
     path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
                          "PPO_MissileCommandEnv_2023-04-25_16-02-25f22dj65w\checkpoint_002209"
     algo = "PPO"  # "PPO"\"AlphaZero"
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             f'len mean: {result["episode_len_mean"]:8.4f}. '
             f'Checkpoint saved to {file_name}'
         )
-        if n % 100 == 0:
+        if n % 500 == 0:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])

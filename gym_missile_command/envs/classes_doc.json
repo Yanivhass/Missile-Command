@@ -11,9 +11,9 @@
     }
   },
   "Matrices": "Matrices used in internal environment functions",
-  "defenders": "columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles, 8-fuel]",
-  "defender missiles" : "columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]",
-  "attackers": "columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-num of missiles, 8-fuel]",
-  "attackers missiles": "# columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]",
+  "defenders": "columns are [0-id, 1-x, 2-y, 3-v_x, 4-v_y, 5-health, 6-target_id, 7-num of missiles, 8-fuel]",
+  "defender missiles" : "columns are [0-id, 1-x, 2-y, 3-v_x, 4-v_y, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]",
+  "attackers": "columns are [0-id, 1-x, 2-y, 3-v_x, 4-v_y, 5-health, 6-target_id, 7-num of missiles, 8-fuel]",
+  "attackers missiles": "# columns are [0-id, 1-x, 2-y, 3-v_x, 4-v_y, 5-health, 6-target_id, 7-launched, 8-parent_id, 9-fuel]",
   "cities": "columns are [0-id, 1-x, 2-y, 3-health]"
 }

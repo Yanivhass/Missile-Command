@@ -22,7 +22,7 @@ class CONFIG:
     SCREEN_HEIGHT: int = 1000
     SCREEN_WIDTH: int = 1000
     SEED = 42
-    SPEED_MODIFIER = 0.9
+    SPEED_MODIFIER = 2
     BACK_COLOR: tuple = (0, 128, 0)  # Green
 
     @dataclass
@@ -83,7 +83,7 @@ class CONFIG:
         """
         QUANTITY: int = 2
         RADIUS: int = 20
-        RANGE: int = 50
+        RANGE: int = 100
         MAX_HEALTH: float = 1
         MISSILES_PER_UNIT: int = 4
         FUEL: int = 250
