@@ -9,7 +9,7 @@ from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import gym
 import ray
 # from ray.rllib.algorithms import ppo
-import ray.rllib.agents.ppo as ppo
+# import ray.rllib.agents.ppo as ppo
 from ray.rllib.algorithms import alpha_zero
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.logger import pretty_print
@@ -21,19 +21,23 @@ from gym_missile_command import MissileCommandEnv
 if __name__ == "__main__":
 
     path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
-                         "PPO_MissileCommandEnv_2023-04-22_11-02-06ixkp89c_\checkpoint_000701"
-    path_to_checkpoint = "tmp/ppo/checkpoint_000052"
+                         "PPO_MissileCommandEnv_2023-06-17_12-33-20zdz0iqty\checkpoint_001001"
+    path_to_checkpoint = "tmp/ppo/checkpoint_001159"
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
     # checkpoint_root = "tmp/ppo/"
     # shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
 
     SELECT_ENV = MissileCommandEnv("")  # "missile-command-v0"  # MissileCommandEnv  # "Taxi-v3" "CartPole-v1"
-    N_ITER = 10
+    N_Episodes = 10
 
-    config = ppo.DEFAULT_CONFIG.copy()
-    config["log_level"] = "WARN"
-    config["framework"] = "torch"
+
+    # config = PPOConfig()
+    # config = config.training(sgd_minibatch_size=256,
+    #                              entropy_coeff=0.001)
+    #     config = config.resources(num_gpus=1)
+    #     config = config.rollouts(num_rollout_workers=10)
+    #     config = config.framework(framework="torch")
 
     print(ray.rllib.utils.check_env(SELECT_ENV))
     agent = (

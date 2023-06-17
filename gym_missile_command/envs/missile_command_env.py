@@ -32,7 +32,7 @@ from ray.rllib.env.env_context import EnvContext
 # shortest turn between two angles [rads]
 def turn_angle(target, source):
     a = target - source
-    return (a + np.pi/2) % np.pi - np.pi/2
+    return (a + np.pi / 2) % np.pi - np.pi / 2
 
 
 def out_of_bounds(points):
@@ -212,7 +212,7 @@ class MissileCommandEnv(gym.Env):
         fire = np.arange(2)
 
         self.single_action = np.array(np.meshgrid(movements, fire)).T.reshape(-1,
-                                                                              3)  # all combinations for single agent action
+                                                                              2)  # all combinations for single agent action
         all_actions = np.tile(np.arange(self.single_action.shape[0]), (attackers_count, 1))
         self.multi_action = np.array(np.meshgrid(*all_actions)).T.reshape(-1,
                                                                           attackers_count)  # all combinations for multi agents
@@ -222,8 +222,8 @@ class MissileCommandEnv(gym.Env):
             self.action_mask = Box(0.0, 1.0, shape=(self.action_space.n,))
 
         buffer = 100  # buffer for out of bounds
-        pose_boxmin = np.array([0 - buffer, 0 - buffer, 0, 0])
-        pose_boxmax = np.array([CONFIG.WIDTH + buffer, CONFIG.HEIGHT + buffer, 100, 360])
+        pose_boxmin = np.array([0 - buffer, 0 - buffer, -100, -100])
+        pose_boxmax = np.array([CONFIG.WIDTH + buffer, CONFIG.HEIGHT + buffer, 100, 100])
 
         # self.observation_dictionary = \
         self.observation_space = \
@@ -249,8 +249,8 @@ class MissileCommandEnv(gym.Env):
                             # 0 - Ready, 1 - Launched
                             'launched': spaces.MultiBinary(attackers_missile_count),
                             # Each missile's target is the entity number
-                            'target': spaces.MultiDiscrete(
-                                np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
+                            # 'target': spaces.MultiDiscrete(
+                            #     np.ones((1, attackers_missile_count)) * (defenders_count + cities_count)),
                             # pose is [x,y,z,heading angle]
                             'pose': spaces.Box(
                                 np.tile(pose_boxmin[0:2], (attackers_missile_count, 1)),
@@ -266,7 +266,7 @@ class MissileCommandEnv(gym.Env):
                                 shape=(attackers_missile_count, 1)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(attackers_missile_count),
-                            'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1))
+                            # 'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1))
                         })
 
                     }),
@@ -290,8 +290,8 @@ class MissileCommandEnv(gym.Env):
                             # 0 - Ready, 1 - Launched
                             'launched': spaces.MultiBinary(defenders_missile_count),
                             # Each missile's target is the entity number
-                            'target': spaces.MultiDiscrete(
-                                np.ones((1, defenders_missile_count)) * (attackers_count + attackers_missile_count)),
+                            # 'target': spaces.MultiDiscrete(
+                            #     np.ones((1, defenders_missile_count)) * (attackers_count + attackers_missile_count)),
                             # pose is [x,y,velocity,heading angle]
                             'pose': spaces.Box(
                                 np.tile(pose_boxmin[0:2], (defenders_missile_count, 1)),
@@ -307,7 +307,7 @@ class MissileCommandEnv(gym.Env):
                                 shape=(defenders_missile_count, 1)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(defenders_missile_count),
-                            'fuel': spaces.Box(low=0, high=np.inf, shape=(defenders_missile_count, 1))
+                            # 'fuel': spaces.Box(low=0, high=np.inf, shape=(defenders_missile_count, 1))
                         }),
                     }),
                     'cities': spaces.Dict({
@@ -503,12 +503,12 @@ class MissileCommandEnv(gym.Env):
             obs['attackers']['missiles']['v_y'].shape).astype(obs['attackers']['missiles']['v_y'].dtype)
         obs['attackers']['missiles']['health'] = self.attackers_missiles[:, 5].reshape(
             obs['attackers']['missiles']['health'].shape).astype(obs['attackers']['missiles']['health'].dtype)
-        obs['attackers']['missiles']['target'] = self.attackers_missiles[:, 6].reshape(
-            obs['attackers']['missiles']['target'].shape).astype(obs['attackers']['missiles']['target'].dtype)
+        # obs['attackers']['missiles']['target'] = self.attackers_missiles[:, 6].reshape(
+        #     obs['attackers']['missiles']['target'].shape).astype(obs['attackers']['missiles']['target'].dtype)
         obs['attackers']['missiles']['launched'] = self.attackers_missiles[:, 7].reshape(
             obs['attackers']['missiles']['launched'].shape).astype(obs['attackers']['missiles']['launched'].dtype)
-        obs['attackers']['missiles']['fuel'] = self.attackers_missiles[:, 9].reshape(
-            obs['attackers']['missiles']['fuel'].shape).astype(obs['attackers']['missiles']['fuel'].dtype)
+        # obs['attackers']['missiles']['fuel'] = self.attackers_missiles[:, 9].reshape(
+        #     obs['attackers']['missiles']['fuel'].shape).astype(obs['attackers']['missiles']['fuel'].dtype)
 
         obs['defenders']['pose'] = self.defenders[:, 1:3].reshape(obs['defenders']['pose'].shape).astype(
             obs['defenders']['pose'].dtype)
@@ -527,12 +527,12 @@ class MissileCommandEnv(gym.Env):
             obs['defenders']['missiles']['v_y'].shape).astype(obs['defenders']['missiles']['v_y'].dtype)
         obs['defenders']['missiles']['health'] = self.defenders_missiles[:, 5].reshape(
             obs['defenders']['missiles']['health'].shape).astype(obs['defenders']['missiles']['health'].dtype)
-        obs['defenders']['missiles']['target'] = self.defenders_missiles[:, 6].reshape(
-            obs['defenders']['missiles']['target'].shape).astype(obs['defenders']['missiles']['target'].dtype)
+        # obs['defenders']['missiles']['target'] = self.defenders_missiles[:, 6].reshape(
+        #     obs['defenders']['missiles']['target'].shape).astype(obs['defenders']['missiles']['target'].dtype)
         obs['defenders']['missiles']['launched'] = self.defenders_missiles[:, 7].reshape(
             obs['defenders']['missiles']['launched'].shape).astype(obs['defenders']['missiles']['launched'].dtype)
-        obs['defenders']['missiles']['fuel'] = self.defenders_missiles[:, 9].reshape(
-            obs['defenders']['missiles']['fuel'].shape).astype(obs['defenders']['missiles']['fuel'].dtype)
+        # obs['defenders']['missiles']['fuel'] = self.defenders_missiles[:, 9].reshape(
+        #     obs['defenders']['missiles']['fuel'].shape).astype(obs['defenders']['missiles']['fuel'].dtype)
 
         obs['cities']['pose'] = self.cities[:, 1:3].reshape(obs['cities']['pose'].shape).astype(
             obs['cities']['pose'].dtype)
@@ -833,9 +833,11 @@ class MissileCommandEnv(gym.Env):
             self.attackers_missiles[missiles_to_launch, 6] = target_id  # set target
             y = all_defenders[target_id, 2] - self.attackers_missiles[missiles_to_launch, 2]
             x = all_defenders[target_id, 1] - self.attackers_missiles[missiles_to_launch, 1]
-            direction = np.mod(np.rad2deg(np.arctan2(y, x)), 360)  # set direction
-            self.attackers_missiles[missiles_to_launch, 3] = np.cos(direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
-            self.attackers_missiles[missiles_to_launch, 4] = np.sin(direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+            direction = np.arctan2(y, x)  # set direction
+            self.attackers_missiles[missiles_to_launch, 3] = np.cos(
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+            self.attackers_missiles[missiles_to_launch, 4] = np.sin(
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
 
             reward_missiles_launched += np.sum(missiles_to_launch) * CONFIG.REWARD.MISSILE_LAUNCHED
         # defenders
@@ -870,24 +872,27 @@ class MissileCommandEnv(gym.Env):
             self.defenders_missiles[missiles_to_launch, 6] = target_id  # set target
             y = all_attackers[target_id, 2] - self.defenders_missiles[missiles_to_launch, 2]
             x = all_attackers[target_id, 1] - self.defenders_missiles[missiles_to_launch, 1]
-            direction = np.mod(np.rad2deg(np.arctan2(y, x)), 360)  # set direction
+            direction = np.mod(np.arctan2(y, x), 2 * np.pi)  # set direction
             # self.defenders_missiles[missiles_to_launch, 4] = direction
             # self.defenders_missiles[missiles_to_launch, 3] = \
             #     CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
-            self.defenders_missiles[missiles_to_launch, 3] = np.cos(direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
-            self.defenders_missiles[missiles_to_launch, 4] = np.sin(direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+            self.defenders_missiles[missiles_to_launch, 3] = np.cos(
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+            self.defenders_missiles[missiles_to_launch, 4] = np.sin(
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
 
         # Roll movements
         # attackers units
         # movement action - [0 = left, 1 = straight, 2 = right] 10 degress turn
         # [delta_pose, velocity, angles] = get_movement(self.attackers[:, 3], self.attackers[:, 4],
         #                                               action['attackers']['movement'])
-        self.attackers[:, 1] += self.attackers[:, 3]
-        self.attackers[:, 2] += self.attackers[:, 4]
         theta = np.arctan2(self.attackers[:, 4], self.attackers[:, 3])
-        theta = np.mod(theta + (action['attackers']['movement'] - 1) * np.deg2rad(10),2*np.pi)
+        theta = np.mod(theta + (action['attackers']['movement'] - 1) * np.deg2rad(10), 2 * np.pi)
         self.attackers[:, 3] = np.cos(theta) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
         self.attackers[:, 4] = np.sin(theta) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
+
+        self.attackers[:, 1] += self.attackers[:, 3]
+        self.attackers[:, 2] += self.attackers[:, 4]
 
         # terminate if out of bounds
         oob = out_of_bounds(self.attackers[:, 1:3])
@@ -915,8 +920,7 @@ class MissileCommandEnv(gym.Env):
         self.defenders_missiles[np.argwhere(self.defenders_missiles[:, 9] == 0), [3, 4, 5]] = 0
 
         # defenders units
-        # [delta_pose, velocity, angles] = get_movement(self.defenders[:, 3], self.defenders[:, 4],
-        #                                               action['defenders']['movement'])
+
         # self.defenders[:, 1:3] += delta_pose
         # self.defenders[:, 4] = angles
 
@@ -954,7 +958,7 @@ class MissileCommandEnv(gym.Env):
             y = all_defenders[target_id, 2] - self.attackers_missiles[attackers_launched, 2]
             x = all_defenders[target_id, 1] - self.attackers_missiles[attackers_launched, 1]
 
-            direction = np.mod(np.arctan2(y, x), 2*np.pi)  # set direction
+            direction = np.arctan2(y, x) # set direction
 
             self.attackers_missiles[attackers_launched, 3] = np.cos(
                 direction) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
@@ -977,7 +981,7 @@ class MissileCommandEnv(gym.Env):
             y = all_attackers[target_id, 2] - self.defenders_missiles[defenders_launched, 2]
             x = all_attackers[target_id, 1] - self.defenders_missiles[defenders_launched, 1]
 
-            direction = np.mod(np.arctan2(y, x), 2 * np.pi)  # set direction
+            direction = np.arctan2(y, x)  # set direction
 
             self.defenders_missiles[defenders_launched, 3] = np.cos(
                 direction) * CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
@@ -1003,8 +1007,10 @@ class MissileCommandEnv(gym.Env):
             targets_xy = all_attackers[target_id, 1:3]
             hits = np.linalg.norm(targets_xy - self.defenders_missiles[defenders_launched, 1:3], axis=-1) <= def_exp_rad
             if np.any(hits):
-                defenders_hit = defenders_launched[hits]
+                defenders_hit = defenders_launched
+                defenders_hit[np.logical_not(hits)] = False
                 self.defenders_missiles[defenders_hit, 3] = 0
+                self.defenders_missiles[defenders_hit, 4] = 0
                 self.defenders_missiles[defenders_hit, 5] = 0
                 attackers_hit = np.isin(self.attackers[:, 0], target_id[hits])
                 if np.any(attackers_hit):
@@ -1019,8 +1025,11 @@ class MissileCommandEnv(gym.Env):
             targets_xy = all_defenders[target_id, 1:3]
             hits = np.linalg.norm(targets_xy - self.attackers_missiles[attackers_launched, 1:3], axis=-1) <= att_exp_rad
             if np.any(hits):
-                attackers_hit = attackers_launched[hits]
-                self.attackers_missiles[attackers_hit, 3, 4, 5] = 0
+                attackers_hit = attackers_launched
+                attackers_hit[np.logical_not(hits)] = False
+                self.attackers_missiles[attackers_hit, 3] = 0
+                self.attackers_missiles[attackers_hit, 4] = 0
+                self.attackers_missiles[attackers_hit, 5] = 0
                 defenders_hit = np.isin(self.defenders[:, 0], target_id[hits])
                 if np.any(defenders_hit):
                     self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[defenders_hit, 0])
@@ -1115,6 +1124,7 @@ class MissileCommandEnv(gym.Env):
                                )
             surface = pygame.surfarray.make_surface(frame)
             surface = pygame.transform.rotate(surface, 90)
+            pygame.display.init()
 
         # Display the processed observation
         elif mode == "processed_observation":
@@ -1153,7 +1163,8 @@ class MissileCommandEnv(gym.Env):
             self.attackers[unit_ids.astype(int), [3, 4]] = 0  # velocity, health = 0
             self.attackers[unit_ids.astype(int), 5] = 0
             missiles_unlaunched = self.attackers_missiles[:, 7] == 0
-            missile_ids = np.isin(self.attackers_missiles[missiles_unlaunched, 8], unit_ids).astype(bool)
+            missile_ids = np.isin(self.attackers_missiles[:, 8], unit_ids).astype(bool)
+            missile_ids = missile_ids & missiles_unlaunched   #   self.attackers_missiles[missile_ids, 0].astype(int)
             self.attackers_missiles[missile_ids, 3] = 0  # velocity = 0
             self.attackers_missiles[missile_ids, 4] = 0
             self.attackers_missiles[missile_ids, 5] = 0  # health = 0
@@ -1162,7 +1173,8 @@ class MissileCommandEnv(gym.Env):
             self.defenders[unit_ids.astype(int), [3, 4]] = 0  # velocity, health = 0
             self.defenders[unit_ids.astype(int), 5] = 0  # velocity, health = 0
             missiles_unlaunched = self.defenders_missiles[:, 7] == 0
-            missile_ids = np.isin(self.defenders_missiles[missiles_unlaunched, 8], unit_ids).astype(bool)
+            missile_ids = np.isin(self.defenders_missiles[:, 8], unit_ids).astype(bool)
+            missile_ids = missile_ids & missiles_unlaunched   #self.defenders_missiles[missile_ids, 0].astype(int)
             self.defenders_missiles[missile_ids, 3] = 0  # velocity = 0
             self.defenders_missiles[missile_ids, 4] = 0
             self.defenders_missiles[missile_ids, 5] = 0  # health = 0

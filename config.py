@@ -36,7 +36,7 @@ class CONFIG:
         RADIUS: int = 20
         RANGE: int = 150
         MAX_HEALTH: float = 1.0
-        MISSILES_PER_UNIT = 8
+        MISSILES_PER_UNIT = 4
 
         INIT_HEIGHT_RANGE = [0.4, 0.9]
         INIT_POS_RANGE = [0.5, 0.6]
@@ -85,7 +85,7 @@ class CONFIG:
         RADIUS: int = 20
         RANGE: int = 100
         MAX_HEALTH: float = 1
-        MISSILES_PER_UNIT: int = 4
+        MISSILES_PER_UNIT: int = 2
         FUEL: int = 250
 
         INIT_HEIGHT_RANGE = [0.3, 0.7] #[0.1, 0.9] #
