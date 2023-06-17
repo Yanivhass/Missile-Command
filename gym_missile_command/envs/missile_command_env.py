@@ -227,8 +227,8 @@ class MissileCommandEnv(gym.Env):
         pose_boxmax = np.array([CONFIG.WIDTH + buffer, CONFIG.HEIGHT + buffer, 100, 100])
 
         if self.normalize_obs:
-            pose_boxmin = np.array([-2, -2, -1, -1])
-            pose_boxmax = np.array([-2, 2, 1, 1])
+            pose_boxmin = np.array([-2, -2, -1.2, -1.2])
+            pose_boxmax = np.array([2, 2, 1.2, 1.2])
 
         # self.observation_dictionary = \
         self.observation_space = \
@@ -551,8 +551,9 @@ class MissileCommandEnv(gym.Env):
             obs['attackers']['v_x'] = obs['attackers']['v_x'] / (CONFIG.ATTACKERS.SPEED)
             obs['attackers']['v_y'] = obs['attackers']['v_y'] / (CONFIG.ATTACKERS.SPEED)
             obs['defenders']['pose'] = obs['defenders']['pose'] / CONFIG.WIDTH - 0.5
-            obs['defenders']['v_x'] = obs['defenders']['v_x'] / (CONFIG.DEFENDERS.SPEED)
-            obs['defenders']['v_y'] = obs['defenders']['v_y'] / (CONFIG.DEFENDERS.SPEED)
+            obs['cities']['pose'] = obs['cities']['pose'] / CONFIG.WIDTH - 0.5
+            # obs['defenders']['v_x'] = obs['defenders']['v_x'] / (CONFIG.DEFENDERS.SPEED)
+            # obs['defenders']['v_y'] = obs['defenders']['v_y'] / (CONFIG.DEFENDERS.SPEED)
             obs['attackers']['missiles']['pose'] = obs['attackers']['missiles']['pose'] / CONFIG.WIDTH - 0.5
             obs['attackers']['missiles']['v_x'] = obs['attackers']['missiles']['v_x'] / (CONFIG.ATTACKERS.MISSILES.SPEED)
             obs['attackers']['missiles']['v_y'] = obs['attackers']['missiles']['v_y'] / (CONFIG.ATTACKERS.MISSILES.SPEED)

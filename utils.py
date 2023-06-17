@@ -123,7 +123,10 @@ def draw_sprite(image, sprite, pose):
     alpha_sprite = sprite[:, :, 3] / 255.0
     alpha_sprite = np.expand_dims(alpha_sprite, -1)
     sprite = alpha_sprite * sprite[:, :, 0:3]
-    sprite += (1 - alpha_sprite) * image[y1:y2, x1:x2, :]
-    image[y1:y2, x1:x2, :] = sprite
+    try:
+        sprite += (1 - alpha_sprite) * image[y1:y2, x1:x2, :]
+        image[y1:y2, x1:x2, :] = sprite
+    except:
+        print("Sprite out-of-bounds")
 
     return image
