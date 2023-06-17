@@ -170,6 +170,7 @@ class MissileCommandEnv(gym.Env):
 
         self.flat_obs = True
         self.mask_actions = False
+        self.normalize_obs = True
         '''
         Action space for the game
         '''
@@ -224,6 +225,10 @@ class MissileCommandEnv(gym.Env):
         buffer = 100  # buffer for out of bounds
         pose_boxmin = np.array([0 - buffer, 0 - buffer, -100, -100])
         pose_boxmax = np.array([CONFIG.WIDTH + buffer, CONFIG.HEIGHT + buffer, 100, 100])
+
+        if self.normalize_obs:
+            pose_boxmin = np.array([-2, -2, -1, -1])
+            pose_boxmax = np.array([-2, 2, 1, 1])
 
         # self.observation_dictionary = \
         self.observation_space = \
@@ -352,6 +357,8 @@ class MissileCommandEnv(gym.Env):
         action_dict['attackers']['movement'] = np.array(
             self.single_action[actions, 0])  # get every 3rd element, starting from 0
         action_dict['attackers']['fire'] = np.array(self.single_action[actions, 1])
+
+        action_dict['defenders']['fire'][:] = 1
 
         return action_dict
 
@@ -539,6 +546,20 @@ class MissileCommandEnv(gym.Env):
         obs['cities']['health'] = self.cities[:, 3].reshape(obs['cities']['health'].shape).astype(
             obs['cities']['health'].dtype)
 
+        if self.normalize_obs:
+            obs['attackers']['pose'] = obs['attackers']['pose'] / CONFIG.WIDTH - 0.5
+            obs['attackers']['v_x'] = obs['attackers']['v_x'] / (CONFIG.ATTACKERS.SPEED)
+            obs['attackers']['v_y'] = obs['attackers']['v_y'] / (CONFIG.ATTACKERS.SPEED)
+            obs['defenders']['pose'] = obs['defenders']['pose'] / CONFIG.WIDTH - 0.5
+            obs['defenders']['v_x'] = obs['defenders']['v_x'] / (CONFIG.DEFENDERS.SPEED)
+            obs['defenders']['v_y'] = obs['defenders']['v_y'] / (CONFIG.DEFENDERS.SPEED)
+            obs['attackers']['missiles']['pose'] = obs['attackers']['missiles']['pose'] / CONFIG.WIDTH - 0.5
+            obs['attackers']['missiles']['v_x'] = obs['attackers']['missiles']['v_x'] / (CONFIG.ATTACKERS.MISSILES.SPEED)
+            obs['attackers']['missiles']['v_y'] = obs['attackers']['missiles']['v_y'] / (CONFIG.ATTACKERS.MISSILES.SPEED)
+            obs['defenders']['missiles']['pose'] = obs['defenders']['missiles']['pose'] / CONFIG.WIDTH - 0.5
+            obs['defenders']['missiles']['v_x'] = obs['defenders']['missiles']['v_x'] / (CONFIG.DEFENDERS.MISSILES.SPEED)
+            obs['defenders']['missiles']['v_y'] = obs['defenders']['missiles']['v_y'] / (CONFIG.DEFENDERS.MISSILES.SPEED)
+
         if self.flat_obs:
             obs = flatten(self.observation_dictionary, obs).astype('float32')
         self.observation = self.observation_space.sample()
@@ -665,8 +686,8 @@ class MissileCommandEnv(gym.Env):
         self.defenders[:, 0] = np.arange(CONFIG.DEFENDERS.QUANTITY)
         self.defenders[:, 1] = bat_pose_x
         self.defenders[:, 2] = bat_pose_y
-        self.defenders[:, 3] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
-        self.defenders[:, 4] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
+        self.defenders[:, 3] = CONFIG.DEFENDERS.SPEED
+        self.defenders[:, 4] = CONFIG.DEFENDERS.SPEED
         self.defenders[:, 5] = 1
         self.defenders[:, 7] = CONFIG.DEFENDERS.MISSILES_PER_UNIT
         id_offset += CONFIG.DEFENDERS.QUANTITY
@@ -691,8 +712,8 @@ class MissileCommandEnv(gym.Env):
         # columns are columns are [0-id, 1-x, 2-y, 3-velocity, 4-direction, 5-health, 6-target_id, 7-launched, 8-parent_id 9-fuel]
         self.defenders_missiles[:, 1] = bat_pose_x
         self.defenders_missiles[:, 2] = bat_pose_y
-        self.defenders_missiles[:, 3] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
-        self.defenders_missiles[:, 4] = CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
+        self.defenders_missiles[:, 3] = CONFIG.DEFENDERS.SPEED
+        self.defenders_missiles[:, 4] = CONFIG.DEFENDERS.SPEED
         self.defenders_missiles[:, 5] = 1
         self.defenders_missiles[:, 6] = 0
         self.defenders_missiles[:, 7] = 0
@@ -713,9 +734,9 @@ class MissileCommandEnv(gym.Env):
         self.attackers[:, 0] = np.arange(CONFIG.ATTACKERS.QUANTITY)
         self.attackers[:, 1] = bat_pose_x
         self.attackers[:, 2] = bat_pose_y
-        self.attackers[:, 3] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER * np.cos(
+        self.attackers[:, 3] = CONFIG.ATTACKERS.SPEED * np.cos(
             np.deg2rad(CONFIG.ATTACKERS.LAUNCH_THETA))
-        self.attackers[:, 4] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER * np.sin(
+        self.attackers[:, 4] = CONFIG.ATTACKERS.SPEED  * np.sin(
             np.deg2rad(CONFIG.ATTACKERS.LAUNCH_THETA))
         self.attackers[:, 5] = 1
         self.attackers[:, 7] = CONFIG.ATTACKERS.MISSILES_PER_UNIT
@@ -727,9 +748,9 @@ class MissileCommandEnv(gym.Env):
         self.attackers_missiles = np.zeros((CONFIG.ATTACKERS.QUANTITY, 10))
         self.attackers_missiles[:, 1] = bat_pose_x
         self.attackers_missiles[:, 2] = bat_pose_y
-        self.attackers_missiles[:, 3] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER * np.cos(
+        self.attackers_missiles[:, 3] = CONFIG.ATTACKERS.SPEED * np.cos(
             np.deg2rad(CONFIG.ATTACKERS.LAUNCH_THETA))
-        self.attackers_missiles[:, 4] = CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER * np.sin(
+        self.attackers_missiles[:, 4] = CONFIG.ATTACKERS.SPEED * np.sin(
             np.deg2rad(CONFIG.ATTACKERS.LAUNCH_THETA))
         self.attackers_missiles[:, 5] = 1
         self.attackers_missiles[:, 7] = 0  # launched
@@ -835,9 +856,9 @@ class MissileCommandEnv(gym.Env):
             x = all_defenders[target_id, 1] - self.attackers_missiles[missiles_to_launch, 1]
             direction = np.arctan2(y, x)  # set direction
             self.attackers_missiles[missiles_to_launch, 3] = np.cos(
-                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
             self.attackers_missiles[missiles_to_launch, 4] = np.sin(
-                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
 
             reward_missiles_launched += np.sum(missiles_to_launch) * CONFIG.REWARD.MISSILE_LAUNCHED
         # defenders
@@ -875,11 +896,11 @@ class MissileCommandEnv(gym.Env):
             direction = np.mod(np.arctan2(y, x), 2 * np.pi)  # set direction
             # self.defenders_missiles[missiles_to_launch, 4] = direction
             # self.defenders_missiles[missiles_to_launch, 3] = \
-            #     CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+            #     CONFIG.DEFENDERS.MISSILES.SPEED
             self.defenders_missiles[missiles_to_launch, 3] = np.cos(
-                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
             self.defenders_missiles[missiles_to_launch, 4] = np.sin(
-                direction) * CONFIG.DEFENDERS.MISSILES.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
 
         # Roll movements
         # attackers units
@@ -888,8 +909,8 @@ class MissileCommandEnv(gym.Env):
         #                                               action['attackers']['movement'])
         theta = np.arctan2(self.attackers[:, 4], self.attackers[:, 3])
         theta = np.mod(theta + (action['attackers']['movement'] - 1) * np.deg2rad(10), 2 * np.pi)
-        self.attackers[:, 3] = np.cos(theta) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
-        self.attackers[:, 4] = np.sin(theta) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
+        self.attackers[:, 3] = np.cos(theta) * CONFIG.ATTACKERS.SPEED
+        self.attackers[:, 4] = np.sin(theta) * CONFIG.ATTACKERS.SPEED
 
         self.attackers[:, 1] += self.attackers[:, 3]
         self.attackers[:, 2] += self.attackers[:, 4]
@@ -958,12 +979,12 @@ class MissileCommandEnv(gym.Env):
             y = all_defenders[target_id, 2] - self.attackers_missiles[attackers_launched, 2]
             x = all_defenders[target_id, 1] - self.attackers_missiles[attackers_launched, 1]
 
-            direction = np.arctan2(y, x) # set direction
+            direction = np.arctan2(y, x)  # set direction
 
             self.attackers_missiles[attackers_launched, 3] = np.cos(
-                direction) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.ATTACKERS.SPEED
             self.attackers_missiles[attackers_launched, 4] = np.sin(
-                direction) * CONFIG.ATTACKERS.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.ATTACKERS.SPEED
 
             oob = out_of_bounds(self.attackers_missiles[:, 1:3])
             if np.any(oob):
@@ -984,9 +1005,9 @@ class MissileCommandEnv(gym.Env):
             direction = np.arctan2(y, x)  # set direction
 
             self.defenders_missiles[defenders_launched, 3] = np.cos(
-                direction) * CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.SPEED
             self.defenders_missiles[defenders_launched, 4] = np.sin(
-                direction) * CONFIG.DEFENDERS.SPEED * CONFIG.SPEED_MODIFIER
+                direction) * CONFIG.DEFENDERS.SPEED
 
             oob = out_of_bounds(self.defenders_missiles[:, 1:3])
             if np.any(oob):
@@ -1164,7 +1185,7 @@ class MissileCommandEnv(gym.Env):
             self.attackers[unit_ids.astype(int), 5] = 0
             missiles_unlaunched = self.attackers_missiles[:, 7] == 0
             missile_ids = np.isin(self.attackers_missiles[:, 8], unit_ids).astype(bool)
-            missile_ids = missile_ids & missiles_unlaunched   #   self.attackers_missiles[missile_ids, 0].astype(int)
+            missile_ids = missile_ids & missiles_unlaunched  # self.attackers_missiles[missile_ids, 0].astype(int)
             self.attackers_missiles[missile_ids, 3] = 0  # velocity = 0
             self.attackers_missiles[missile_ids, 4] = 0
             self.attackers_missiles[missile_ids, 5] = 0  # health = 0
@@ -1174,7 +1195,7 @@ class MissileCommandEnv(gym.Env):
             self.defenders[unit_ids.astype(int), 5] = 0  # velocity, health = 0
             missiles_unlaunched = self.defenders_missiles[:, 7] == 0
             missile_ids = np.isin(self.defenders_missiles[:, 8], unit_ids).astype(bool)
-            missile_ids = missile_ids & missiles_unlaunched   #self.defenders_missiles[missile_ids, 0].astype(int)
+            missile_ids = missile_ids & missiles_unlaunched  # self.defenders_missiles[missile_ids, 0].astype(int)
             self.defenders_missiles[missile_ids, 3] = 0  # velocity = 0
             self.defenders_missiles[missile_ids, 4] = 0
             self.defenders_missiles[missile_ids, 5] = 0  # health = 0

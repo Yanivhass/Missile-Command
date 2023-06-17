@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import config
+
 
 @dataclass
 class CONFIG:
@@ -40,7 +42,7 @@ class CONFIG:
 
         INIT_HEIGHT_RANGE = [0.4, 0.9]
         INIT_POS_RANGE = [0.5, 0.6]
-        SPEED: float = 0.0
+        SPEED: float = 0.0 * 2
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 90
 
@@ -60,7 +62,7 @@ class CONFIG:
             RADIUS: int = 10
             EXPLOSION_RADIUS: float = 30
             PROBA_IN: float = 0.005
-            SPEED: float = 21.0
+            SPEED: float = 21.0 * 2
             MAX_HEALTH = 1.0
 
             NB_ACTIONS: int = 9
@@ -88,9 +90,9 @@ class CONFIG:
         MISSILES_PER_UNIT: int = 2
         FUEL: int = 250
 
-        INIT_HEIGHT_RANGE = [0.3, 0.7] #[0.1, 0.9] #
-        INIT_POS_RANGE = [0.1, 0.3] #[0.1, 0.9] #
-        SPEED: float = 20.0
+        INIT_HEIGHT_RANGE = [0.3, 0.7]  # [0.1, 0.9] #
+        INIT_POS_RANGE = [0.1, 0.3]  # [0.1, 0.9] #
+        SPEED: float = 20.0 * 2
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 0
         MAX_LAUNCH: int = 4
@@ -98,7 +100,6 @@ class CONFIG:
 
         DETECTION_RANGE = [200.0, 2000.0]
         KILL_RANGE = 1000.0
-
 
         COLOR: tuple = (255, 0, 0)
         SIZE: int = 10
@@ -111,7 +112,7 @@ class CONFIG:
             EXPLOSION_RADIUS: float = 50
             PROBA_IN: float = 0.005
             MAX_HEALTH = 1
-            SPEED: float = 20.0
+            SPEED: float = 20.0 * 2
             LAUNCH_THETA: float = 0
             DTHETA = np.arange(-10, 25, 5)
             FUEL: int = 200
@@ -138,7 +139,7 @@ class CONFIG:
 
         INIT_HEIGHT_RANGE = [0.4, 0.9]
         INIT_POS_RANGE = [0.7, 0.8]
-        SPEED: float = 0.0
+        SPEED: float = 0.0 * 3
         # LAUNCH_VEL = [0.0, 1.0]
         LAUNCH_THETA: float = 0
 
@@ -150,6 +151,7 @@ class CONFIG:
         SIZE: int = 10
         WIDTH: int = 100
         HEIGHT: int = 100
+
     #
     # class ENNEMY_CITIES():
     #     """Cities configuration.
