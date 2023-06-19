@@ -1006,9 +1006,9 @@ class MissileCommandEnv(gym.Env):
             direction = np.arctan2(y, x)  # set direction
 
             self.defenders_missiles[defenders_launched, 3] = np.cos(
-                direction) * CONFIG.DEFENDERS.SPEED
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
             self.defenders_missiles[defenders_launched, 4] = np.sin(
-                direction) * CONFIG.DEFENDERS.SPEED
+                direction) * CONFIG.DEFENDERS.MISSILES.SPEED
 
             oob = out_of_bounds(self.defenders_missiles[:, 1:3])
             if np.any(oob):

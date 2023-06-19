@@ -20,9 +20,9 @@ from gym_missile_command import MissileCommandEnv
 
 if __name__ == "__main__":
 
-    path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
-                         "PPO_MissileCommandEnv_2023-06-17_12-33-20zdz0iqty\checkpoint_001001"
-    path_to_checkpoint = "tmp/ppo/checkpoint_001159"
+    # path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
+    #                      "PPO_MissileCommandEnv_2023-06-17_12-33-20zdz0iqty\checkpoint_001001"
+    path_to_checkpoint = "tmp/ppo/checkpoint_006630"
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
     # checkpoint_root = "tmp/ppo/"
@@ -60,12 +60,12 @@ if __name__ == "__main__":
             done = False
             obs, info = env.reset()
             while not done:
-                frame = env.render()
+                frame = env.render(mode="rgb_array")
                 if frame is not None:
                     frame = np.array(Image.fromarray(frame.astype('uint8')))  #.rotate(180)
                     recorded_frames.append(frame)
 
-                action = agent.compute_single_action(obs)
+                action = agent.compute_single_action(obs, explore=False)
                 obs, reward, done, truncated, info = env.step(action)
                 episode_reward += reward
 

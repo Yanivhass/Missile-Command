@@ -4,8 +4,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-import config
-
 
 @dataclass
 class CONFIG:
@@ -36,11 +34,11 @@ class CONFIG:
         """
         QUANTITY: int = 2  # number of entities
         RADIUS: int = 20
-        RANGE: int = 150
+        RANGE: int = 300
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 4
 
-        INIT_HEIGHT_RANGE = [0.4, 0.9]
+        INIT_HEIGHT_RANGE = [0.4, 0.6]
         INIT_POS_RANGE = [0.5, 0.6]
         SPEED: float = 0.0 * 2
         # LAUNCH_VEL = [0.0, 1.0]
@@ -85,12 +83,12 @@ class CONFIG:
         """
         QUANTITY: int = 2
         RADIUS: int = 20
-        RANGE: int = 100
+        RANGE: int = 250
         MAX_HEALTH: float = 1
         MISSILES_PER_UNIT: int = 2
         FUEL: int = 250
 
-        INIT_HEIGHT_RANGE = [0.3, 0.7]  # [0.1, 0.9] #
+        INIT_HEIGHT_RANGE = [0.4, 0.6]  # [0.1, 0.9] #
         INIT_POS_RANGE = [0.1, 0.3]  # [0.1, 0.9] #
         SPEED: float = 20.0 * 2
         # LAUNCH_VEL = [0.0, 1.0]
@@ -137,7 +135,7 @@ class CONFIG:
         # RANGE: float = 466.0
         MAX_HEALTH: float = 1
 
-        INIT_HEIGHT_RANGE = [0.4, 0.9]
+        INIT_HEIGHT_RANGE = [0.4, 0.6]
         INIT_POS_RANGE = [0.7, 0.8]
         SPEED: float = 0.0 * 3
         # LAUNCH_VEL = [0.0, 1.0]
