@@ -12,6 +12,7 @@ from config import CONFIG
 # from game.utility import  action_reset, sim_src_action # sim_enemies_action, sim_friends_action,
 import __init__
 
+
 if __name__ == "__main__":
 
     render = True

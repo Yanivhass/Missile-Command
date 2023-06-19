@@ -17,10 +17,31 @@ import torch
 from gym_missile_command import MissileCommandEnv
 from rllib_example import CartPoleSparseRewards
 
+def evaluate(env, agent, num_episodes=100, render=False):
+    """Evaluate an agent. returns mean episode reward"""
+    rewards = []
+    for episode in range(num_episodes):
+        # Initialize episode
+        observation = env.reset()
+        done = False
+        episode_reward = 0.0
+        while not done:
+            # Simulate one step in environment
+            action = agent.act(observation)
+            observation, reward, done, _ = env.step(action)
+            episode_reward += reward
+            if render:
+                env.render()
+        print(f"Episode {episode} reward: {episode_reward}")
+        rewards.append(episode_reward)
+
+    return rewards
+
+
+
 if __name__ == "__main__":
     load_checkpoint = False
-    path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
-                         "PPO_MissileCommandEnv_2023-04-25_16-02-25f22dj65w\checkpoint_002209"
+    path_to_checkpoint = "checkpoints/"
     algo = "PPO"  # "PPO"\"AlphaZero"
     N_ITER = 40000
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
