@@ -36,7 +36,7 @@ class CONFIG:
         """
         QUANTITY: int = 2  # number of entities
         RADIUS: int = 20
-        RANGE: int = 150
+        RANGE: int = 300
         MAX_HEALTH: float = 1.0
         MISSILES_PER_UNIT = 4
 
@@ -85,7 +85,7 @@ class CONFIG:
         """
         QUANTITY: int = 2
         RADIUS: int = 20
-        RANGE: int = 100
+        RANGE: int = 200
         MAX_HEALTH: float = 1
         MISSILES_PER_UNIT: int = 2
         FUEL: int = 250
