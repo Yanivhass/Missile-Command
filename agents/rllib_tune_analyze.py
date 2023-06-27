@@ -34,8 +34,6 @@ def explore(config):
 
 
 if __name__ == "__main__":
-    load_checkpoint = False
-    path_to_checkpoint = "checkpoints/"
     algo = "PPO"  # "PPO"\"AlphaZero"
     N_ITER = 40000
     register_env("MissileCommandEnv", lambda config: MissileCommandEnv(config))
@@ -48,8 +46,22 @@ if __name__ == "__main__":
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
     SELECT_ENV = MissileCommandEnv  # MissileCommandEnv("")  # "missile-command-v0"   # "Taxi-v3" "CartPole-v1"
     # SELECT_ENV = CartPoleSparseRewards
-    # print(ray.rllib.utils.check_env(SELECT_ENV))
+    experiment_path = f"C:/Users/Yaniv/ray_results/ppo_hyperparmas/PPO_MissileCommandEnv_fe9b5_00002_2_clip_param=0.3000,kl_coeff=1,lambda=0.9970,num_sgd_iter=30,sgd_minibatch_size=2048,train_batch_2023-06-22_18-37-17"
+    print(f"Loading results from {experiment_path}...")
 
+    restored_tuner = tune.Tuner.restore(experiment_path)
+    result_grid = restored_tuner.get_results()
+
+    # Iterate over results
+    for i, result in enumerate(result_grid):
+        if result.error:
+            print(f"Trial #{i} had an error:", result.error)
+            continue
+
+        print(
+            f"Trial #{i} finished successfully with a mean accuracy metric of:",
+            result.metrics["mean_accuracy"]
+        )
     if algo == "PPO":
         hyperparam_mutations = {
             # "kl_coeff":lambda: random.uniform(0.9, 1.0),

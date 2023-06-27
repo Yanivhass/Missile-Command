@@ -1052,11 +1052,11 @@ class MissileCommandEnv(gym.Env):
                 self.attackers_missiles[attackers_hit, 3] = 0
                 self.attackers_missiles[attackers_hit, 4] = 0
                 self.attackers_missiles[attackers_hit, 5] = 0
-                defenders_hit = np.isin(self.defenders[:, 0], target_id[hits])
+                defenders_hit = np.isin(self.defenders[:, 0], target_id[hits]) & (self.defenders[:, 5] > 0)
                 if np.any(defenders_hit):
                     self.destroy_units_by_id(side="defenders", unit_ids=self.defenders[defenders_hit, 0])
                     reward_battery_destroyed = np.sum(defenders_hit) * CONFIG.REWARD.DESTROYED_AA_BATTERY
-                cities_hit = np.isin(self.cities[:, 0], target_id[hits])
+                cities_hit = np.isin(self.cities[:, 0], target_id[hits]) & (self.cities[:, 3] > 0)
                 if np.any(cities_hit):
                     self.cities[cities_hit, 3] = 0  # health = 0
                     reward_city_destroyed = np.sum(cities_hit) * CONFIG.REWARD.DESTROYED_CITY
@@ -1070,7 +1070,8 @@ class MissileCommandEnv(gym.Env):
         if np.any(alive_targets) & np.any(alive_attackers):
             dist_to_target = np.linalg.norm(self.cities[alive_targets, 1:3] - self.attackers[alive_attackers, 1:3],
                                             axis=-1)
-            reward_dist_to_target += np.exp(-np.min(dist_to_target))
+            #reward_dist_to_target -= 0.1 *(1-np.min(dist_to_target)/np.linalg.norm([CONFIG.WIDTH, CONFIG.HEIGHT]))
+            # reward_dist_to_target += np.exp(-np.min(dist_to_target))
         # penalize minimal distance between all attackers and all missiles
         # launched = (self.defenders_missiles[:, 7] == 1) & (self.defenders_missiles[:, 5] > 0)
         # if np.any(launched) & np.any(alive_attackers):

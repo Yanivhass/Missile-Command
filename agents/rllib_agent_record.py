@@ -20,9 +20,9 @@ from gym_missile_command import MissileCommandEnv
 
 if __name__ == "__main__":
 
-    # path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
-    #                      "PPO_MissileCommandEnv_2023-06-17_12-33-20zdz0iqty\checkpoint_001001"
-    path_to_checkpoint = "tmp/ppo/checkpoint_006630"
+    path_to_checkpoint = "C:/Users/Yaniv/ray_results/" \
+                         "PPO_MissileCommandEnv_2023-06-23_23-10-57p0gf97f6\checkpoint_002801"
+    # path_to_checkpoint = "tmp/ppo/checkpoint_000210"
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
     # checkpoint_root = "tmp/ppo/"
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                 episode_reward += reward
 
             clip = ImageSequenceClip(recorded_frames, fps=10)
-            clip.write_videofile(f'../Results/captRllib{i}.mp4')
+            # clip.write_videofile(f'../Results/captRllib{i}.mp4')
         except Exception as e:
             print(e)
     ray.shutdown()  # "Undo ray.init()".

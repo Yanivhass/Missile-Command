@@ -68,7 +68,7 @@ class CONFIG:
             NB_ACTIONS: int = 9
             LAUNCH_THETA: float = 90
             DTHETA = np.arange(-10, 25, 5)
-            FUEL: int = 30
+            FUEL: int = 15
             GUIDED: bool = True
 
             COLOR: tuple = (255, 255, 255)
