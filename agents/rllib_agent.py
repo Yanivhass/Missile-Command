@@ -11,16 +11,18 @@ import gym
 import ray
 # from ray.rllib.algorithms import ppo
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
+from ray.rllib.algorithms.sac import SACConfig
+from ray.rllib.algorithms.impala import ImpalaConfig
+
 from ray.tune.logger import pretty_print
 import torch
 from gym_missile_command import MissileCommandEnv
 from rllib_example import CartPoleSparseRewards
-from config import CONFIG
 
-def evaluate(env, agent, num_episodes=100, render=False):
+def evaluate(tmpenv, agent, num_episodes=100, render=False):
     """Evaluate an agent. returns mean episode reward"""
     rewards = []
+    env = MissileCommandEnv(env_config=None)
     for episode in range(num_episodes):
         # Initialize episode
         observation = env.reset()
@@ -41,17 +43,21 @@ def evaluate(env, agent, num_episodes=100, render=False):
 
 
 if __name__ == "__main__":
-    Print_every = 100
+    ray.shutdown()
+    n_vals = []
+    reward_means = []
+    reward_10th = []
+    reward_90th = []
     load_checkpoint = False
-    path_to_checkpoint = "C:/Users/Yaniv/ray_results/PPO_MissileCommandEnv_2023-06-23_17-14-33k9whvkqi/checkpoint_000210"
-    algo = "PPO"  # "PPO"\"AlphaZero"
-    N_ITER = 40000
+    path_to_checkpoint = "checkpoints/"
+    algo = "Impala"  # "PPO"\"AlphaZero"
+    N_ITER = 10000
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
 
     info = ray.init(ignore_reinit_error=True)
     print("Dashboard URL: http://{}".format(info["webui_url"]))
 
-    checkpoint_root = "tmp/ppo/"
+    checkpoint_root = "tmp/sac2/"
     shutil.rmtree(checkpoint_root, ignore_errors=True, onerror=None)  # clean up old runs
     SELECT_ENV = MissileCommandEnv  # MissileCommandEnv("")  # "missile-command-v0"   # "Taxi-v3" "CartPole-v1"
     # SELECT_ENV = CartPoleSparseRewards
@@ -59,28 +65,11 @@ if __name__ == "__main__":
 
     if algo == "PPO":
         config = PPOConfig()
-        # config = config.training(sgd_minibatch_size=256, #685
-        #                          entropy_coeff=0.001,
-        #                          clip_param=0.31,
-        #                          kl_coeff=1,
-        #                          lambda_=0.882648)
-        config = config.training(sgd_minibatch_size=685,
+        config = config.training(sgd_minibatch_size=256,
                                  entropy_coeff=0.001)
-        # config = config.exploration(
-        #     exploration_config={
-        #         "type": "EpsilonGreedy",
-        #         # Parameters for the Exploration class' constructor:
-        #         "initial_epsilon": 1.0,
-        #         "final_epsilon": 0.02,
-        #         "epsilon_timesteps": 100 * 100 * 100,  # Timesteps over which to anneal epsilon.
-        #     }
-        # )
-        config = config.training(gamma=0.97)
-        config = config.resources(num_gpus_per_worker=0.1)
+        config = config.resources(num_gpus=1)
         config = config.rollouts(num_rollout_workers=10)
         config = config.framework(framework="torch")
-        # config = config.evaluation(evaluation_interval=100)
-        # config = config.debugging(seed=CONFIG.SEED)
         '''explore_config = config.exploration_config.update(
             {"type": "EpsilonGreedy",
              "initial_epsilon": 0.96,
@@ -99,22 +88,23 @@ if __name__ == "__main__":
                 .environment(env=SELECT_ENV, env_config={})
                 .build()
         )'''
+    if algo == "Impala":
+        config = ImpalaConfig()
+        #lr_schedule = [[0, 0.001],[15*1024, 0.0005], [50*1024, 0.0001]]
+        config = config.training(lr=0.0001)
 
-    if algo == "AlphaZero":
-        config = AlphaZeroConfig()
+        config = config.resources(num_gpus=1,
+                                  num_gpus_per_worker=0.1)
+        config = config.rollouts(num_rollout_workers=10)
         config = config.framework(framework="torch")
-        config = config.training(sgd_minibatch_size=256)
-        config = config.resources(num_gpus=1)
-        config = config.rollouts(num_rollout_workers=6)
         print(config.to_dict())
         # Build a Algorithm object from the config and run 1 training iteration.
         agent = config.build(env=SELECT_ENV)
 
-    if load_checkpoint:
-        agent.restore(path_to_checkpoint)
     results = []
     episode_data = []
     episode_json = []
+
     for n in range(N_ITER):
         result = agent.train()
         results.append(result)
@@ -129,33 +119,31 @@ if __name__ == "__main__":
         }
         episode_data.append(episode)
         episode_json.append(json.dumps(episode))
-        file_name = agent.save(checkpoint_root)
+
 
         print(
-            f'{n + 1:3d}: Min/Mean/Max/std reward: '
+            f'{n + 1:3d}: Min/Mean/Max reward: '
             f'{result["episode_reward_min"]:8.4f}/{result["episode_reward_mean"]:8.4f}/'
-            f'{result["episode_reward_max"]:8.4f}/{reward_std:8.4f}, '
+            f'{result["episode_reward_max"]:8.4f}, '
             f'len mean: {result["episode_len_mean"]:8.4f}. '
-            f'Checkpoint saved to {file_name}'
         )
-        print(f"Episodes this iteration:{result['episodes_this_iter']}")
-        if n % Print_every == 0:
-            std_hist = [d["episode_reward_max"] for d in episode_data]
+        if n % 100 == 0:
             fig = plt.figure()
             ax = fig.add_subplot(111)
+            # rewards = evaluate(SELECT_ENV, agent, num_episodes=100, render=False)
             ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])
             ax.plot(np.arange(len(episode_data)), [d["episode_reward_mean"] for d in episode_data])
             ax.plot(np.arange(len(episode_data)), [d["episode_reward_max"] for d in episode_data])
             ax.fill_between(np.arange(len(episode_data)),
-                            [d["episode_reward_mean"]+d["episode_reward_std"] for d in episode_data],
-                            [d["episode_reward_mean"]-d["episode_reward_std"] for d in episode_data],
+                            [d["episode_reward_mean"] + d["episode_reward_std"] for d in episode_data],
+                            [d["episode_reward_mean"] - d["episode_reward_std"] for d in episode_data],
                             alpha=0.2)
-            ax.legend(['Min reward', 'Average reward', 'Max reward', 'Reward std'])
+            ax.legend(['Min Reward', 'Average reward', 'Max Reward', 'Reward std'])
             plt.ylabel('Score')
-            plt.xlabel('Iteration #')
-            plt.savefig(f"../Results/training scores{n}.png")
+            plt.xlabel('Episode #')
+            plt.savefig(f"Results_SAC2/training scores{n}.png")
+            file_name = agent.save(checkpoint_root)
             plt.show()
-            agent.save()
 
 
     # import pprint
@@ -165,10 +153,14 @@ if __name__ == "__main__":
     ax.plot(np.arange(len(episode_data)), [d["episode_reward_min"] for d in episode_data])
     ax.plot(np.arange(len(episode_data)), [d["episode_reward_mean"] for d in episode_data])
     ax.plot(np.arange(len(episode_data)), [d["episode_reward_max"] for d in episode_data])
-    ax.legend(['Min reward', 'Average reward', 'Max reward'])
+    ax.fill_between(np.arange(len(episode_data)),
+                    [d["episode_reward_mean"] + d["episode_reward_std"] for d in episode_data],
+                    [d["episode_reward_mean"] - d["episode_reward_std"] for d in episode_data],
+                    alpha=0.2)
+    ax.legend(['Min Reward', 'Average reward', 'Max Reward', 'Reward std'])
     plt.ylabel('Score')
     plt.xlabel('Episode #')
-    plt.savefig("../Results/training scores.png")
+    plt.savefig("Results_SAC2/training scores.png")
     plt.show()
 
     policy = agent.get_policy()
