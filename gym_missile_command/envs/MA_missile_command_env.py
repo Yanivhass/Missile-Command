@@ -32,6 +32,7 @@ from ray.tune.registry import register_env
 from gym.envs.registration import register
 
 
+
 def out_of_bounds(points):
     below = points[:, 1] < 0
     above = points[:, 1] > CONFIG.HEIGHT
@@ -78,6 +79,7 @@ def get_movement(velocity, angles, action):
     return [delta_pose, velocity, angles]
 
 
+
 class MissileCommandEnv_MA(MultiAgentEnv):
     """Missile Command Gym environment.
 
@@ -96,6 +98,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
     # Fr_NB_ACTIONS = CONFIG.FRIENDLY_MISSILES.NB_ACTIONS
     metadata = {"render_modes": ["human", "rgb_array"],
                 'video.frames_per_second': CONFIG.FPS}
+
 
     def __init__(self, env_config: EnvContext):
 
@@ -127,12 +130,14 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         # columns are [id, x, y, health]
         self.cities = np.zeros((cities_count, 4))
 
+
         self.flat_obs = True
         self.mask_actions = False
         self._skip_env_checking = True
         '''
         Action space for the game
         '''
+
         num_of_targets = defenders_count + cities_count
         attacker_targets = np.ones((1, attackers_missile_count)) * num_of_targets
         # attacker_targets[:,1] = num_of_targets
@@ -168,19 +173,21 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         # Multi Discrete
         # self.action_space = spaces.MultiDiscrete([3, (defenders_count + cities_count), 2] * self.attackers_count)
 
+
         # Discrete
-        movements = np.arange(3)
-        targets = np.arange(defenders_count + cities_count)
+        movements = np.arange(4)
         fire = np.arange(2)
+
 
         self.single_action = np.array(np.meshgrid(movements, targets, fire)).T.reshape(-1,
                                                                                        3)  # all combinations for single agent action
         all_actions = np.tile(np.arange(self.single_action.shape[0]), (self.attackers_count, 1))
         self.multi_action = np.array(np.meshgrid(*all_actions)).T.reshape(-1, 2)  # all combinations for multi agents
 
+
         self.action_space = spaces.Discrete(self.single_action.shape[0])  # action space of a single agent
         if self.mask_actions:
-            self.action_mask = Box(0.0, 1.0, shape=(self.action_space.n,))
+            self.action_mask = Box(0.0, 1.0, shape=(self.multi_action.shape[0],))
 
         # Game world dimensions
         buffer = 100  # buffer for out of bounds
@@ -188,6 +195,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         pose_boxmax = np.array([CONFIG.WIDTH + buffer, CONFIG.HEIGHT + buffer, 100, 360])
 
         # self.observation_dictionary = \
+
         # self.observation_dictionary = \
         #     spaces.Dict(
         #         {
@@ -286,6 +294,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         self.observation_space = spaces.Dict(
             {
                 'obs': spaces.Dict({
+
                     # state-space for the attacking team bombers
                     'attackers': spaces.Dict({
                         'pose': spaces.Box(
@@ -323,9 +332,8 @@ class MissileCommandEnv_MA(MultiAgentEnv):
                                 shape=(attackers_missile_count, 1)),
                             # Missiles health is binary
                             'health': spaces.MultiBinary(attackers_missile_count),
-                            'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1))
-                        })
-
+                            'fuel': spaces.Box(low=0, high=np.inf, shape=(attackers_missile_count, 1)),
+                        }),
                     }),
                     'defenders': spaces.Dict({
                         'pose': spaces.Box(
@@ -375,6 +383,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
                             shape=(cities_count, 2)),
                         'health': spaces.Box(0, 1, shape=(cities_count, 1)),
                     })
+
                 })
             })
 
@@ -387,6 +396,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         #             "obs": self.observation_space
         #         }
         #     )
+
         # Set the seed for reproducibility
         self.seed(CONFIG.SEED)
         # Initialize the state
@@ -405,10 +415,12 @@ class MissileCommandEnv_MA(MultiAgentEnv):
     def action_dict_from_index(self, action_index):
         actions = self.multi_action[action_index, :]
         action_dict = self.action_dictionary.sample()
+
         action_dict['attackers']['movement'] = np.array(
             self.single_action[actions, 0])  # get every 3rd element, starting from 0
         action_dict['attackers']['target'] = np.array(self.single_action[actions, 1])
         action_dict['attackers']['fire'] = np.array(self.single_action[actions, 2])
+
 
         return action_dict
 
@@ -686,8 +698,8 @@ class MissileCommandEnv_MA(MultiAgentEnv):
     def action_to_dict(self, action):
         obs = self.action_dictionary.sample()
         obs['attackers']['movement'] = self.attackers[:, 1:3]
-        obs['attackers']['target'] = self.attackers[:, 3]
-        obs['attackers']['target'] = self.attackers[:, 3]
+        '''obs['attackers']['target'] = self.attackers[:, 3]
+        obs['attackers']['target'] = self.attackers[:, 3]'''
 
         obs['defenders']['pose'] = self.defenders[:, 1:3]
         obs['defenders']['velocity'] = self.defenders[:, 3]
@@ -802,7 +814,9 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         self.observation = self.state_to_dict()
         return self.observation, {}
 
+
     def step(self, action_i):
+
         """
         Go from current step to next one. Missile command step includes:
         1. Update movements according to given actions
@@ -830,6 +844,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         # command = action
         # action = action_dict
         action = self.action_dict_from_index(action_i)
+        obs = self.state_to_dict()
         # action = unflatten(self.action_dictionary, action)
         # Reset current reward
         # ------------------------------------------
@@ -855,7 +870,7 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         # launch attacker missiles
         # chose one ready missile from each living attacker and
         # launch for parent who chose to fire
-        attackers_firing = np.argwhere(action['attackers']['fire'])
+        attackers_firing = obs['attackers']['fire']  # attackers that chose to fire
         alive = self.attackers[attackers_firing, 5] > 0
         attackers_firing = attackers_firing[alive]  # live attackers that chose to fire
         unlaunched = self.attackers_missiles[:, 7] == 0
@@ -869,17 +884,20 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         # convert back to binary array of missile
         missiles_to_launch = np.isin(self.attackers_missiles[:, 0], missiles_to_launch)
         parents = self.attackers_missiles[missiles_to_launch, 8].astype(int)
-        target_id = action['attackers']['target']
-        target_id = target_id[parents]
+        #target_id = action['attackers']['target']
+        #target_id = target_id[parents]
 
         # confirm target is within range and alive
         in_range = \
-            np.linalg.norm(all_defenders[target_id, 1:3] - self.attackers_missiles[missiles_to_launch, 1:3],
+            np.linalg.norm(all_defenders[parents, 1:3] - self.attackers_missiles[missiles_to_launch, 1:3],
                            axis=-1) <= attackers_range
+        target_id = in_range
         alive = all_defenders[target_id, 3] > 0
         missiles_to_launch[missiles_to_launch] = in_range & alive
         target_id = target_id[in_range & alive]
         if np.any(missiles_to_launch):
+            target_id = np.argmin(np.linalg.norm(all_defenders[parents, 1:3] - self.attackers_missiles[missiles_to_launch, 1:3],
+                           axis=-1))
             self.attackers_missiles[missiles_to_launch, 7] = True  # set missiles to launched
             self.attackers_missiles[missiles_to_launch, 6] = target_id  # set target
             y = all_defenders[target_id, 2] - self.attackers_missiles[missiles_to_launch, 2]
@@ -1107,7 +1125,12 @@ class MissileCommandEnv_MA(MultiAgentEnv):
         truncated = False
         return full_obs, self.reward_timestep, done, truncated, {}
         # [obs], [reward], [terminated], [truncated], and [infos]
+    '''
+    def step(self, action):
 
+
+        truncated = False
+        return self.observation, self.reward_timestep, done, truncated, {}
     def get_state(self):
         return self.state_to_dict(), {}
 
