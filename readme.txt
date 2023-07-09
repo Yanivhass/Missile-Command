@@ -1,4 +1,19 @@
+how to run:
+1)start a new python project with a virutal environment
+2)pip install: 
+pytorch version compatible with your machine, recommended to use the instructions in the official website
+rllib, recommended to use the instructions in the official website
+other requirements can be downloaded from pip wherever they are required, but most are included in the above downloads.
+3)run random_agent to test everything is working, run rllib_agent to start training, or rllib_agent_record to test a checkpoint and save the video.
+
+gym_missile_command folder - environment files
+missile_command_env is the main environment we used, with the other variants still WIP
+
+sprites - graphics for env, change the files to whatever you like
 
 
-######### h264 encoding
-ffmpeg -r 60 -f image2 -s 1920x1080 -i pic%04d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p test.mp4
+
+agents folder - scripts for running algorithms
+random_agent - random agent to test the environment
+DQN_agent - basic script of DQN implementation
+rllib_agent - train Rllib algorithms on the environment

@@ -72,14 +72,13 @@ def rotate_image(image, angle):
     return result
 
 
-
 def draw_sprite(image, sprite, pose):
     """
 
     Args:
         image: np array, RGB matrix of image
         sprite: np array, RGB matrix of sprite smaller than image
-        pose: np array, [x,y,azimuth] vector of entity to draw
+        pose: np array, [x,y,azimuth] vector of entity to draw, or [x,y,vx,vy]
 
     Returns:
         image: image after drawing sprite
@@ -89,6 +88,10 @@ def draw_sprite(image, sprite, pose):
             or pose[1] < 0 \
             or pose[1] > image.shape[0]:
         return image
+
+    heading = pose[2]
+    if pose.shape[0] > 3:
+        heading = np.rad2deg(np.arctan2(pose[3], pose[2]))
 
     sprite_width = sprite.shape[0]
     sprite_height = sprite.shape[1]
@@ -101,7 +104,7 @@ def draw_sprite(image, sprite, pose):
     offset_x2 = sprite_width
     offset_y1 = 0
     offset_y2 = sprite_height
-    sprite = rotate_image(sprite, pose[2])
+    sprite = rotate_image(sprite, heading)
 
     if x1 < 0:
         offset_x1 = abs(x1)
@@ -120,7 +123,10 @@ def draw_sprite(image, sprite, pose):
     alpha_sprite = sprite[:, :, 3] / 255.0
     alpha_sprite = np.expand_dims(alpha_sprite, -1)
     sprite = alpha_sprite * sprite[:, :, 0:3]
-    sprite += (1 - alpha_sprite) * image[y1:y2, x1:x2, :]
-    image[y1:y2, x1:x2, :] = sprite
+    try:
+        sprite += (1 - alpha_sprite) * image[y1:y2, x1:x2, :]
+        image[y1:y2, x1:x2, :] = sprite
+    except:
+        print("Sprite out-of-bounds")
 
     return image
