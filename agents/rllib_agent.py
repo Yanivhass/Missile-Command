@@ -15,7 +15,6 @@ from ray.rllib.algorithms.alpha_zero import AlphaZeroConfig
 from ray.tune.logger import pretty_print
 import torch
 from gym_missile_command import MissileCommandEnv
-from rllib_example import CartPoleSparseRewards
 from config import CONFIG
 
 def evaluate(env, agent, num_episodes=100, render=False):
