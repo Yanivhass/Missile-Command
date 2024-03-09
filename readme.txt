@@ -17,3 +17,9 @@ DQN_agent - basic script of DQN implementation for testing
 rllib_agent - train Rllib algorithms on the environment
 
 We currently support PPO & IMPALA
+
+
+![Screenshot from the game](https://github.com/Yanivhass/Missile-Command/blob/main/Screenshot.png)
+
+
+
