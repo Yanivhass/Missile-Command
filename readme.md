@@ -2,6 +2,10 @@
 
 The objective of this project is to evaluate Reinforcement Learning (RL) algorithms within the context of a multi-agent competitive scenario. Our scenarios are implemented in a mini real-time strategy (RTS) game, crafted specifically as a testbed for multi-agent RL. This setup provides a backdrop for assessing the efficacy, adaptability, and strategic depth of various RL algorithms in decision making, cooperation, and competition in a simulated setting.
 
+
+![Screenshot from the game](Screenshot.png)
+
+
 ## How to Run
 
 This guide will walk you through setting up and running the project. Follow these steps to get started:
@@ -37,8 +41,6 @@ To verify that everything is working or to begin training, use the following scr
   - `DQN_agent`: A basic script implementing DQN for testing.
   - `rllib_agent`: Use this to train RLlib algorithms on the environment. We currently support PPO & IMPALA.
 
-
-![Screenshot from the game](Screenshot.png)
 
 
 
