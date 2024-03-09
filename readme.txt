@@ -11,9 +11,9 @@ missile_command_env is the main environment we used, with the other variants sti
 
 sprites - graphics for env, change the files to whatever you like
 
-
-
 agents folder - scripts for running algorithms
 random_agent - random agent to test the environment
-DQN_agent - basic script of DQN implementation
+DQN_agent - basic script of DQN implementation for testing
 rllib_agent - train Rllib algorithms on the environment
+
+We currently support PPO & IMPALA
